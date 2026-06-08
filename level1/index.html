@@ -33,7 +33,6 @@
     </video>
     <button id="skipBtn" onclick="showFinishResult()">Пропустить ▶▶</button>
 
-    <!-- Табличка с результатом поверх видео -->
     <div id="finishResult">
       <div id="frEmoji">🏁</div>
       <div id="frTitle">Финиш!</div>
@@ -45,7 +44,7 @@
       <!-- БАННЕР ПЕРЕХОДА НА УРОВЕНЬ 2 -->
       <div id="level2Banner">
         <div id="lvl2Badge">УРОВЕНЬ 2</div>
-        <div id="lvl2Text">Ты в офисе. Теперь нужно согласовать заявку!</div>
+        <div id="lvl2Text">Ты в офисе. Впереді — собеседование!</div>
         <button id="lvl2Btn" onclick="goLevel2()">ИГРАТЬ →</button>
       </div>
 
@@ -84,7 +83,6 @@
     }
 
     function goLevel2() {
-      // Храним результат первого уровня в sessionStorage
       sessionStorage.setItem('level1_done', '1');
       window.location.href = '../level2/index.html';
     }
