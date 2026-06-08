@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Согласовано?</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Предзагрузка картинки заставки -->
   <link rel="preload" href="../Main.png" as="image">
-  <!-- Telegram SDK загружается асинхронно, не блокирует страницу -->
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- game.js читается параллельно с рендером DOM -->
   <script defer src="game.js"></script>
 </head>
 <body>
@@ -24,20 +21,44 @@
   <div id="gameWrapper" style="display:none">
     <canvas id="gameCanvas"></canvas>
     <div id="ui">
-      <span id="timer">60</span>с &nbsp; 
+      <span id="timer">60</span>с &nbsp;
       <span id="distance">0</span> / 10 км
     </div>
   </div>
 
-  <!-- ЭКРАН РЕЗУЛЬТАТА -->
+  <!-- ФИНИШНЫЙ РОЛИК -->
+  <div id="finishScreen">
+    <video id="finishVideo" playsinline preload="none">
+      <source src="../Pictures/final_level1.mp4" type="video/mp4">
+    </video>
+    <button id="skipBtn" onclick="showFinishResult()">Пропустить ▶▶</button>
+
+    <!-- Табличка с результатом поверх видео (скрыта до конца ролика) -->
+    <div id="finishResult">
+      <div id="frEmoji">🏁</div>
+      <div id="frTitle">Финиш!</div>
+      <div class="stat-row">⏱ Время <span id="frTime">0с</span></div>
+      <div class="stat-row">📏 Дистанция <span id="frScore">0 км</span></div>
+      <div id="frMedal">🥇</div>
+      <div id="frMedalLabel"></div>
+      <div class="btn-row">
+        <button class="btn-retry" onclick="location.reload()">🔄 Ещё раз</button>
+        <button class="btn-share" onclick="shareResult()">
+          <span class="btn-share-icon">📤</span>Поделиться
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН РЕЗУЛЬТАТА (проигрыш / таймаут) -->
   <div id="result">
     <div id="resultCard">
-      <div id="resultEmoji">🏁</div>
-      <div id="resultTitle">Финиш!</div>
+      <div id="resultEmoji">💥</div>
+      <div id="resultTitle">Game Over</div>
       <div class="stat-row">ℹ️ Результат <span id="statScore">0 км</span></div>
       <div class="stat-row">⏱ Время <span id="statTime">0с</span></div>
-      <div id="medal">🥇</div>
-      <div id="medalLabel">Золотая медаль</div>
+      <div id="medal">😅</div>
+      <div id="medalLabel"></div>
       <div class="btn-row">
         <button class="btn-retry" onclick="location.reload()">🔄 Ещё раз</button>
         <button class="btn-share" onclick="shareResult()">
@@ -49,18 +70,16 @@
 
   <script>
     function startGame() {
-      // Моментально скрываем заставку — игра появится мгновенно
-      const splash = document.getElementById('splash');
-      const wrapper = document.getElementById('gameWrapper');
-      splash.style.display = 'none';
-      wrapper.style.display = 'block';
-      // initGame точно есть (загружен через defer)
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('gameWrapper').style.display = 'block';
       initGame();
     }
 
     function shareResult() {
-      const score = document.getElementById('statScore').textContent;
-      const time  = document.getElementById('statTime').textContent;
+      const score = document.getElementById('frScore')?.textContent
+                 || document.getElementById('statScore').textContent;
+      const time  = document.getElementById('frTime')?.textContent
+                 || document.getElementById('statTime').textContent;
       const text  = `🏃 Сбежал в GreenBank! Пройдено: ${score} за ${time}. Сможешь быстрее? → @GreenBankBot`;
       if (window.Telegram?.WebApp?.switchInlineQuery) {
         Telegram.WebApp.switchInlineQuery(text, ['users', 'groups']);
@@ -68,7 +87,7 @@
         navigator.share({ text });
       } else {
         navigator.clipboard?.writeText(text);
-        alert('Текст скопирован в буфер!');
+        alert('Текст скопирован!');
       }
     }
   </script>
