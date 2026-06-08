@@ -5,17 +5,18 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
 #resultScreen {
   display: none;
   position: fixed; inset: 0; z-index: 200;
-  background: linear-gradient(135deg, #0d1b2a, #1b3a2d);
+  background: rgba(10,25,20,0.72);
   align-items: center; justify-content: center;
 }
 #resultCard {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(13,27,42,0.92);
+  border: 1px solid rgba(255,255,255,0.2);
   border-radius: 24px;
   padding: 36px 28px;
   max-width: 400px; width: 92%;
   text-align: center;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
 #resultEmoji { font-size: 72px; margin-bottom: 12px; }
 #resultTitle { font-size: 26px; font-weight: 900; margin-bottom: 10px; color: #a5d6a7; }
@@ -32,15 +33,16 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
 #quizHeader {
   display: flex; align-items: center; gap: 10px;
   padding: 18px 16px 10px;
-  background: rgba(0,0,0,0.35);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,20,30,0.82);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
 }
 #hrAvatar { font-size: 32px; }
 #hrName { font-size: 13px; color: #a5d6a7; font-weight: 700; flex: 1; }
-#quizProgress { font-size: 13px; color: #aaa; white-space: nowrap; }
+#quizProgress { font-size: 13px; color: #ccc; white-space: nowrap; }
 
 #progressBar {
-  height: 4px; background: rgba(255,255,255,0.1);
+  height: 4px; background: rgba(255,255,255,0.15);
 }
 #progressFill {
   height: 4px; background: #4caf50;
@@ -53,21 +55,24 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
   padding: 6px 16px;
   font-size: 13px;
   color: #81c784;
+  background: rgba(10,20,30,0.65);
 }
 
 #questionBox {
   margin: 12px 16px 0;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(10,20,35,0.88);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 16px;
   padding: 20px 18px;
   min-height: 80px;
   display: flex; align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 #questionText {
   font-size: 17px;
   font-weight: 700;
   line-height: 1.45;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 
 #answersBox {
@@ -77,8 +82,8 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
 .ans-btn {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(10,20,35,0.80);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 14px;
   color: #fff;
   font-size: 15px;
@@ -86,11 +91,12 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
   line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }
 .ans-btn:active { transform: scale(0.98); }
-.ans-btn:not(:disabled):hover { background: rgba(255,255,255,0.13); }
-.ans-btn.correct { background: rgba(76,175,80,0.35); border-color: #4caf50; color: #a5d6a7; }
-.ans-btn.wrong   { background: rgba(244,67,54,0.3);  border-color: #f44336; color: #ef9a9a; }
+.ans-btn:not(:disabled):hover { background: rgba(30,60,90,0.90); }
+.ans-btn.correct { background: rgba(27,94,32,0.90); border-color: #4caf50; color: #c8e6c9; }
+.ans-btn.wrong   { background: rgba(183,28,28,0.85); border-color: #f44336; color: #ffcdd2; }
 
 #feedback {
   margin: 12px 16px 0;
@@ -100,8 +106,18 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
   line-height: 1.5;
   min-height: 20px;
 }
-.fb-correct { background: rgba(76,175,80,0.15); border: 1px solid rgba(76,175,80,0.3); color: #a5d6a7; }
-.fb-wrong   { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #ef9a9a; }
+.fb-correct {
+  background: rgba(27,94,32,0.88);
+  border: 1px solid rgba(76,175,80,0.5);
+  color: #c8e6c9;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.fb-wrong {
+  background: rgba(183,28,28,0.82);
+  border: 1px solid rgba(244,67,54,0.5);
+  color: #ffcdd2;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
 
 #nextBtn {
   margin: 14px 16px 0;
@@ -110,7 +126,7 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
   border: none; border-radius: 14px;
   color: #fff; font-size: 16px; font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(76,175,80,0.35);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
   transition: opacity 0.2s;
 }
 #nextBtn:active { opacity: 0.8; }
@@ -124,4 +140,4 @@ html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d1
   cursor: pointer; border: none;
 }
 .btn-retry { background: linear-gradient(135deg, #2e7d32, #43a047); color: #fff; }
-.btn-back  { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid rgba(255,255,255,0.2); }
+.btn-back  { background: rgba(255,255,255,0.15); color: #ccc; border: 1px solid rgba(255,255,255,0.25); }
