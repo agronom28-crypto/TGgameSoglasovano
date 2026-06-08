@@ -57,7 +57,7 @@ function loadAssets(cb) {
 
 let state = {};
 
-// ─── ПАРАЛЛАКС ───────────────────────────────────────────────────────────────
+// ─── ПАРАЛЛАКС
 const PARALLAX_LAYERS = [
   { speed: 0.08, items: [] },
   { speed: 0.30, items: [] },
@@ -137,7 +137,7 @@ function drawParallax() {
   });
 }
 
-// ─── ПЫЛЬ ────────────────────────────────────────────────────────────────────
+// ─── ПЫЛЬ
 let dustParticles = [];
 function spawnDust(boost) {
   for (let i=0;i<(boost?3:1);i++)
@@ -151,7 +151,7 @@ function drawDust() {
   dustParticles.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.color},${p.life*0.7})`;ctx.fill();});
 }
 
-// ─── БУСТ-ВСПЫШКА ────────────────────────────────────────────────────────────
+// ─── БУСТ-ВСПЫШКА
 let flash={active:false,life:0}, burstParticles=[], shake={x:0,y:0,life:0};
 function triggerBoostFlash() {
   flash={active:true,life:1.0};
@@ -178,7 +178,126 @@ function drawFlash() {
   });
 }
 
-// ─── ХИТБОКСЫ ────────────────────────────────────────────────────────────────
+// ─── ФИНИШНАЯ РАЗМЕТКА (ОФИС + ЛЕНТА)
+// Позиция финиша по шкале дистанции:
+// remaining = (TOTAL_DIST - state.distance) км до финиша
+// при remaining=2 — финиш стоит на расстоянии 2 экрана
+function getFinishX() {
+  const remaining  = TOTAL_DIST - state.distance;
+  // Сколько пикселей занимает один км за секунду
+  const pxPerSec   = (canvas.width / 2.2) * (state.boost ? 2.5 : 1);
+  const secPerKm   = 1 / BASE_SPEED;
+  const pxPerKm    = pxPerSec * secPerKm;
+  // Финиш слева от игрока (PLAYER_X) плюс remaining км
+  return PLAYER_X + remaining * pxPerKm;
+}
+
+function drawFinishLine() {
+  if (state.distance < 8) return;
+  const fx = getFinishX();
+  if (fx < -300 || fx > canvas.width + 400) return;
+
+  const GY = GROUND_Y;
+  ctx.save();
+
+  // ── ТЕНЬ здания
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(fx + 10, GY - 3, 140, 14, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // ── ОФИСНОЕ ЗДАНИЕ
+  const bW = 280, bH = 240;
+  const bX = fx - 40;          // смещено левее чтобы центр прохода был справа
+  const bY = GY - bH;
+
+  // Фундамент / цоколь
+  ctx.fillStyle = '#455a64';
+  ctx.fillRect(bX - 6, bY - 8, bW + 12, 12);
+
+  // Стены — светло-серый бетон
+  ctx.fillStyle = '#cfd8dc';
+  ctx.fillRect(bX, bY, bW, bH);
+
+  // Окна (4 колонки x 5 рядов)
+  const cols = 4, rows = 5;
+  const winW = Math.floor((bW - 24) / cols) - 6;
+  const winH = Math.floor((bH - 44) / rows) - 8;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const wx = bX + 12 + c * (winW + 6);
+      const wy = bY + 10 + r * (winH + 8);
+      const lit = (r * cols + c) % 4 !== 2;
+      ctx.fillStyle = lit ? 'rgba(255,240,160,0.9)' : 'rgba(90,130,160,0.55)';
+      ctx.fillRect(wx, wy, winW, winH);
+      ctx.strokeStyle = '#78909c'; ctx.lineWidth = 1;
+      ctx.strokeRect(wx, wy, winW, winH);
+      // Горизонтальная перемычка
+      ctx.strokeStyle = 'rgba(120,144,156,0.6)';
+      ctx.beginPath(); ctx.moveTo(wx, wy + winH/2); ctx.lineTo(wx+winW, wy+winH/2); ctx.stroke();
+    }
+  }
+
+  // Вертикальные пилястры по углам
+  ctx.fillStyle = '#546e7a';
+  ctx.fillRect(bX - 4, bY - 4, 10, bH + 8);
+  ctx.fillRect(bX + bW - 6, bY - 4, 10, bH + 8);
+
+  // Дверь
+  ctx.fillStyle = '#37474f';
+  ctx.fillRect(bX + bW/2 - 18, GY - 60, 36, 60);
+  ctx.fillStyle = '#ffd54f'; // ручка
+  ctx.beginPath(); ctx.arc(bX + bW/2 + 10, GY - 30, 4, 0, Math.PI*2); ctx.fill();
+
+  // Вывеска GreenBank
+  const signW = 160, signH = 32;
+  const signX = bX + bW/2 - signW/2;
+  const signY = bY - signH - 12;
+  ctx.fillStyle = '#1b5e20';
+  if (ctx.roundRect) {
+    ctx.beginPath(); ctx.roundRect(signX, signY, signW, signH, 8); ctx.fill();
+  } else {
+    ctx.fillRect(signX, signY, signW, signH);
+  }
+  ctx.fillStyle = '#a5d6a7';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('GREENBANK', bX + bW/2, signY + 11);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('ГОЛОВНОЙ ОФИС', bX + bW/2, signY + 26);
+
+  // ── ДВЕ СТОЙКИ ФИНИШНОЙ ЛЕНТЫ
+  const poleH = Math.round(SPRITE_H * 1.35);
+  const poleX1 = fx;
+  const poleX2 = fx + 80;
+  ctx.fillStyle = '#e53935';
+  ctx.fillRect(poleX1 - 4, GY - poleH, 7, poleH);
+  ctx.fillRect(poleX2 - 4, GY - poleH, 7, poleH);
+
+  // Клеткатая лента
+  const tapeY = GY - Math.round(SPRITE_H * 0.82);
+  const tapeW = poleX2 - poleX1;
+  const sqW   = 12;
+  const nSq   = Math.ceil(tapeW / sqW);
+  for (let i = 0; i < nSq; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#e53935' : '#ffffff';
+    ctx.fillRect(poleX1 + i * sqW, tapeY, sqW, 14);
+  }
+  ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(poleX1, tapeY, tapeW, 14);
+
+  // Надпись на земле
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🏁  10 км  🏁', poleX1 + tapeW/2, GY + 20);
+
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+// ─── ХИТБОКСЫ
 function playerBox() {
   const duck=state.isDucking;
   return {x1:PLAYER_X+P.left,x2:PLAYER_X+P.right,y1:state.y+(duck?P.duckTop:P.fullTop),y2:state.y};
@@ -190,7 +309,7 @@ function obstacleBox(o) {
 function boostBox(b){return{x1:b.x,x2:b.x+44,y1:GROUND_Y-170,y2:GROUND_Y-120};}
 function overlaps(a,b){return a.x1<b.x2&&a.x2>b.x1&&a.y1<b.y2&&a.y2>b.y1;}
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ─── INIT
 function initGame() {
   canvas=document.getElementById('gameCanvas');
   ctx=canvas.getContext('2d');
@@ -211,7 +330,7 @@ function initGame() {
   loadAssets(()=>loop());
 }
 
-// ─── УПРАВЛЕНИЕ ──────────────────────────────────────────────────────────────
+// ─── УПРАВЛЕНИЕ
 let touchStartY=0;
 function bindControls() {
   const doJump=()=>{if(!state.isJumping){state.vy=-15;state.isJumping=true;}};
@@ -227,7 +346,7 @@ function bindControls() {
   });
 }
 
-// ─── СТИК-ФИГУРА ─────────────────────────────────────────────────────────────
+// ─── СТИК-ФИГУРА
 function drawStickFigure(dX,dY,dW,dH,step,boost) {
   const cx=dX+dW/2, s=Math.sin(step*Math.PI*2);
   ctx.strokeStyle=boost?'#FFD700':'#1a237e'; ctx.fillStyle=boost?'#FFD700':'#1565C0';
@@ -244,7 +363,7 @@ function drawStickFigure(dX,dY,dW,dH,step,boost) {
   ctx.stroke();
 }
 
-// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
+// ─── РИСУЕМ ПЕРСОНАЖА
 function drawCharacter() {
   const groundY=state.y,duck=state.isDucking,jumping=state.isJumping,boost=state.boost;
   const step=state.animTime*(boost?ANIM_FPS*1.6:ANIM_FPS)/FRAME_COUNT;
@@ -265,7 +384,7 @@ function drawCharacter() {
   ctx.restore();
 }
 
-// ─── ОБЪЕКТЫ ──────────────────────────────────────────────────────────────────
+// ─── ОБЪЕКТЫ
 function spawnObstacle(){state.obstacles.push({type:Math.random()>0.5?'low':'high',x:canvas.width+40});}
 function spawnBoost(){state.boosts.push({x:canvas.width+40});}
 function drawObstacles() {
@@ -288,7 +407,7 @@ function drawBoosts() {
   });
 }
 
-// ─── UPDATE ───────────────────────────────────────────────────────────────────
+// ─── UPDATE
 function update(dt) {
   if (!state.running) return;
   const fps=state.boost?ANIM_FPS*1.6:ANIM_FPS;
@@ -312,14 +431,17 @@ function update(dt) {
   state.obstacles.forEach(o=>o.x-=moveSpeed*dt);
   state.boosts.forEach(b=>b.x-=moveSpeed*dt);
   const now=Date.now();
-  if (now-state.lastObstacleTime>1600){spawnObstacle();state.lastObstacleTime=now;}
-  if (now-state.lastBoostTime>4000){spawnBoost();state.lastBoostTime=now;}
+  // Не спавним препятствия после 8.5 км — даём игроку увидеть финиш
+  if (state.distance < 8.5) {
+    if (now-state.lastObstacleTime>1600){spawnObstacle();state.lastObstacleTime=now;}
+    if (now-state.lastBoostTime>4000){spawnBoost();state.lastBoostTime=now;}
+  }
   state.obstacles=state.obstacles.filter(o=>o.x>-100);
   state.boosts=state.boosts.filter(b=>b.x>-100);
   checkCollisions();
 }
 
-// ─── КОЛЛИЗИИ ─────────────────────────────────────────────────────────────────
+// ─── КОЛЛИЗИИ
 function checkCollisions() {
   const pb=playerBox();
   state.obstacles.forEach(o=>{if(overlaps(pb,obstacleBox(o)))endGame('hit');});
@@ -329,7 +451,7 @@ function checkCollisions() {
   });
 }
 
-// ─── DRAW ─────────────────────────────────────────────────────────────────────
+// ─── DRAW
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();ctx.translate(shake.x,shake.y);
@@ -339,7 +461,11 @@ function draw() {
   const rs=ctx.createLinearGradient(0,GROUND_Y-10,0,GROUND_Y+10);
   rs.addColorStop(0,'rgba(0,0,0,0.18)');rs.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=rs;ctx.fillRect(0,GROUND_Y-10,canvas.width,20);
-  drawBoosts();drawObstacles();drawDust();drawCharacter();
+  drawBoosts();
+  drawObstacles();
+  drawFinishLine();    // офис + лента — за персонажем
+  drawDust();
+  drawCharacter();     // персонаж поверх
   if (state.timeLeft>55){
     ctx.fillStyle='rgba(0,0,0,0.55)';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
     ctx.fillText('↑ прыжок   ↓ присесть',canvas.width/2,GROUND_Y-160);
@@ -351,7 +477,7 @@ function draw() {
   document.getElementById('distance').textContent=state.distance.toFixed(2);
 }
 
-// ─── ФИНИШНЫЙ РОЛИК ───────────────────────────────────────────────────────────
+// ─── ФИНИШНЫЙ РОЛИК
 function showFinishResult() {
   const video = document.getElementById('finishVideo');
   video.pause();
@@ -360,32 +486,22 @@ function showFinishResult() {
 }
 
 function playFinishCutscene(elapsed, score, medal) {
-  // Заполняем данные в карточке финиша
   document.getElementById('frTime').textContent   = `${elapsed}с`;
   document.getElementById('frScore').textContent  = `${score} км`;
   document.getElementById('frMedal').textContent  = medal.icon;
   document.getElementById('frMedalLabel').textContent = medal.label;
-
-  // Показываем финишный экран
   const screen = document.getElementById('finishScreen');
   screen.classList.add('show');
-
-  // Запускаем видео
   const video = document.getElementById('finishVideo');
   video.currentTime = 0;
   const playPromise = video.play();
   if (playPromise !== undefined) {
-    playPromise.catch(() => {
-      // Автовоспроизведение заблокировано — сразу показываем результат
-      showFinishResult();
-    });
+    playPromise.catch(() => showFinishResult());
   }
-
-  // Когда видео закончится — показываем результат
   video.onended = () => showFinishResult();
 }
 
-// ─── РЕЗУЛЬТАТ ────────────────────────────────────────────────────────────────
+// ─── РЕЗУЛЬТАТ
 function getMedal(reason, score, elapsed) {
   if (reason==='finish') {
     if (elapsed<=30) return {icon:'🥇',label:'Золотая медаль — спринтер!'};
@@ -402,17 +518,12 @@ function endGame(reason) {
   const elapsed=parseFloat((GAME_DURATION-state.timeLeft).toFixed(1));
   const score=parseFloat(state.distance.toFixed(2));
   const medal=getMedal(reason,score,elapsed);
-
   if (window.Telegram?.WebApp)
     Telegram.WebApp.sendData(JSON.stringify({score,time:elapsed,reason}));
-
   if (reason==='finish') {
-    // Запускаем финишный ролик с результатом поверх
     playFinishCutscene(elapsed, score, medal);
     return;
   }
-
-  // Проигрыш или таймаут — обычный экран
   if (reason==='timeout') {
     document.getElementById('resultEmoji').textContent='⏰';
     document.getElementById('resultTitle').textContent='Время вышло!';
