@@ -6,8 +6,24 @@
   <title>Уровень 2 — Собеседование</title>
   <link rel="stylesheet" href="style.css">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Фоновое видео */
+    #bgVideo {
+      position: fixed; inset: 0; z-index: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+    /* Все экраны поверх видео */
+    #resultScreen, #quizScreen { position: relative; z-index: 1; }
+  </style>
 </head>
 <body>
+
+<!-- ФОНОВОЕ ВИДЕО — крутится бесконечно -->
+<video id="bgVideo" autoplay loop muted playsinline preload="auto">
+  <source src="../Pictures/Level2_VideoFon_QUIZ.mp4" type="video/mp4">
+</video>
 
 <!-- ФИНИШ -->
 <div id="resultScreen">
@@ -47,6 +63,15 @@
 </div>
 
 <script>
+// Гарантируем запуск фонового видео после жеста пользователя
+window.addEventListener('load', () => {
+  const v = document.getElementById('bgVideo');
+  v.play().catch(() => {
+    document.addEventListener('touchstart', () => v.play(), { once: true });
+    document.addEventListener('click',      () => v.play(), { once: true });
+  });
+});
+
 const QUESTIONS = [
   {
     q: "Почему вы хотите работать именно в GreenBank?",
@@ -170,9 +195,7 @@ const QUESTIONS = [
   }
 ];
 
-let current = 0;
-let score = 0;
-let answered = false;
+let current = 0, score = 0, answered = false;
 
 function showQuestion() {
   const q = QUESTIONS[current];
@@ -183,7 +206,6 @@ function showQuestion() {
   document.getElementById('feedback').className = '';
   document.getElementById('nextBtn').style.display = 'none';
   answered = false;
-
   const box = document.getElementById('answersBox');
   box.innerHTML = '';
   q.answers.forEach((ans, i) => {
@@ -199,14 +221,11 @@ function selectAnswer(idx, btn) {
   if (answered) return;
   answered = true;
   const q = QUESTIONS[current];
-  const allBtns = document.querySelectorAll('.ans-btn');
-
-  allBtns.forEach((b, i) => {
+  document.querySelectorAll('.ans-btn').forEach((b, i) => {
     b.disabled = true;
     if (i === q.correct) b.classList.add('correct');
-    else if (i === idx) b.classList.add('wrong');
+    else if (i === idx)  b.classList.add('wrong');
   });
-
   const fb = document.getElementById('feedback');
   if (idx === q.correct) {
     score++;
@@ -222,11 +241,8 @@ function selectAnswer(idx, btn) {
 
 function nextQuestion() {
   current++;
-  if (current >= QUESTIONS.length) {
-    showResult();
-  } else {
-    showQuestion();
-  }
+  if (current >= QUESTIONS.length) showResult();
+  else showQuestion();
 }
 
 function showResult() {
@@ -234,13 +250,13 @@ function showResult() {
   document.getElementById('resultScreen').style.display = 'flex';
   document.getElementById('resultScore').textContent = `Правильных ответов: ${score} из 20`;
   let emoji, title, comment;
-  if (score >= 18) { emoji='🏆'; title='ПРИНЯТ(А)!'; comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; }
-  else if (score >= 14) { emoji='😎'; title='Почти идеал!'; comment='Мы вам перезвоним. Честно. Наверное.'; }
-  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...'; comment='Приходите через полгода. Подучитесь.'; }
-  else if (score >= 5) { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; }
-  else { emoji='💀'; title='Это было... смело'; comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; }
-  document.getElementById('resultEmoji').textContent = emoji;
-  document.getElementById('resultTitle').textContent = title;
+  if (score >= 18)      { emoji='🏆'; title='ПРИНЯТ(А)!';             comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; }
+  else if (score >= 14) { emoji='😎'; title='Почти идеал!';           comment='Мы вам перезвоним. Честно. Наверное.'; }
+  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...';      comment='Приходите через полгода. Подучитесь.'; }
+  else if (score >= 5)  { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; }
+  else                  { emoji='💀'; title='Это было... смело';       comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; }
+  document.getElementById('resultEmoji').textContent   = emoji;
+  document.getElementById('resultTitle').textContent   = title;
   document.getElementById('resultComment').textContent = comment;
   localStorage.setItem('level2_done', '1');
 }
