@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>До работы из дома</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Предзагрузка картинки заставки -->
+  <link rel="preload" href="../Main.png" as="image">
+  <!-- Telegram SDK загружается асинхронно, не блокирует страницу -->
+  <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- game.js читается параллельно с рендером DOM -->
+  <script defer src="game.js"></script>
 </head>
 <body>
 
   <!-- ЗАСТАВКА -->
   <div id="splash">
-    <img src="../Main.png" alt="Обложка" id="coverImg">
+    <img src="../Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
     <button id="playBtn" onclick="startGame()">▶ PLAY</button>
   </div>
 
@@ -41,12 +47,14 @@
     </div>
   </div>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="game.js"></script>
   <script>
     function startGame() {
-      document.getElementById('splash').style.display = 'none';
-      document.getElementById('gameWrapper').style.display = 'block';
+      // Моментально скрываем заставку — игра появится мгновенно
+      const splash = document.getElementById('splash');
+      const wrapper = document.getElementById('gameWrapper');
+      splash.style.display = 'none';
+      wrapper.style.display = 'block';
+      // initGame точно есть (загружен через defer)
       initGame();
     }
 
