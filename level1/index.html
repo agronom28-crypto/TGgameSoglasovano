@@ -7,13 +7,31 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div id="ui">
-    <span id="timer">60</span>с
-    <span id="distance">0</span> / 10 км
+
+  <!-- ЭКРАН ЗАСТАВКИ -->
+  <div id="splash">
+    <img src="../Main.png" alt="Обложка" id="coverImg">
+    <button id="playBtn" onclick="startGame()">▶ PLAY</button>
   </div>
-  <div id="result" style="display:none"></div>
+
+  <!-- ИГРА -->
+  <div id="gameWrapper" style="display:none">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+      <span id="timer">60</span>с &nbsp;
+      <span id="distance">0</span> / 10 км
+    </div>
+    <div id="result" style="display:none"></div>
+  </div>
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="game.js"></script>
+  <script>
+    function startGame() {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('gameWrapper').style.display = 'block';
+      initGame();
+    }
+  </script>
 </body>
 </html>
