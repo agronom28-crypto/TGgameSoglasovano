@@ -349,6 +349,80 @@ function checkCollisions() {
   });
 }
 
+// ─── ФИНИШ + ЗДАНИЕ ОФИСА ─────────────────────────────────────────────────────
+function drawFinishLine() {
+  const remaining = TOTAL_DIST - state.distance;
+  if (remaining > 2) return; // показываем только когда осталось меньше 2 км
+
+  // Позиция финиша на экране — появляется справа, движется влево
+  const screenX = canvas.width * 0.6 + (remaining / 2) * canvas.width * 0.8;
+
+  // ── Здание офиса (за финишной чертой) ──
+  const bX = screenX + 20;
+  const bW = 160, bH = 200;
+  const bY = GROUND_Y - bH;
+
+  // Основной корпус
+  ctx.fillStyle = '#90A4AE';
+  ctx.fillRect(bX, bY, bW, bH);
+
+  // Тёмная передняя грань
+  ctx.fillStyle = '#78909C';
+  ctx.fillRect(bX, bY, bW * 0.1, bH);
+
+  // Окна
+  ctx.fillStyle = '#B3E5FC';
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 4; col++) {
+      const wx = bX + 16 + col * 34;
+      const wy = bY + 20 + row * 36;
+      ctx.fillRect(wx, wy, 20, 24);
+      // Отражение в окне
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(wx, wy, 6, 10);
+      ctx.fillStyle = '#B3E5FC';
+    }
+  }
+
+  // Крыша
+  ctx.fillStyle = '#546E7A';
+  ctx.fillRect(bX - 6, bY - 10, bW + 12, 12);
+
+  // Надпись "OFFICE"
+  ctx.fillStyle = '#ECEFF1';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('OFFICE', bX + bW / 2, bY + bH - 14);
+  ctx.textAlign = 'left';
+
+  // ── Финишная черта ──
+  // Столбы
+  ctx.fillStyle = '#333';
+  ctx.fillRect(screenX - 4, GROUND_Y - 160, 8, 160);
+  ctx.fillRect(screenX + 60, GROUND_Y - 160, 8, 160);
+
+  // Чёрно-белая лента
+  const stripes = 10;
+  const stripeH = 16, tapeY = GROUND_Y - 160;
+  for (let i = 0; i < stripes; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
+    ctx.fillRect(screenX - 4 + i * (68 / stripes), tapeY, 68 / stripes, stripeH);
+  }
+
+  // Флажки 🏁
+  ctx.font = '28px sans-serif';
+  ctx.fillText('🏁', screenX - 18, GROUND_Y - 160);
+  ctx.fillText('🏁', screenX + 52, GROUND_Y - 160);
+
+  // Подпись "ФИНИШ"
+  ctx.fillStyle = '#D32F2F';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ФИНИШ', screenX + 32, GROUND_Y - 170);
+  ctx.textAlign = 'left';
+}
+
+
 // ─── DRAW ──────────────────────────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -361,6 +435,7 @@ function draw() {
   ctx.fillStyle = rs; ctx.fillRect(0, GROUND_Y - 10, canvas.width, 20);
   drawBoosts();
   drawObstacles();
+  drawFinishLine();
   drawDust();
   drawCharacter(state.y, state.isDucking, state.boost);
   if (state.timeLeft > 55) {
