@@ -10,7 +10,172 @@ const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
 
 let state = {};
 
-// ─── ПЫЛЬ ───────────────────────────────────────────────
+// ─── ПАРАЛЛАКС ───────────────────────────────────────────────────────────────
+// Три слоя: небо+облака, дальние деревья, ближние кусты
+const PARALLAX_LAYERS = [
+  { speed: 0.08, items: [] },  // слой 0: облака
+  { speed: 0.30, items: [] },  // слой 1: дальние деревья
+  { speed: 0.65, items: [] },  // слой 2: ближние кусты / заборы
+];
+
+function initParallax() {
+  const W = canvas.width, H = GROUND_Y;
+
+  // Облака — размазанные эллипсы
+  PARALLAX_LAYERS[0].items = [];
+  for (let i = 0; i < 6; i++) {
+    PARALLAX_LAYERS[0].items.push({
+      x: Math.random() * W * 2,
+      y: H * 0.05 + Math.random() * H * 0.28,
+      w: 80 + Math.random() * 120,
+      h: 28 + Math.random() * 26,
+    });
+  }
+
+  // Дальние деревья (пирамиды-ёлки или округлые)
+  PARALLAX_LAYERS[1].items = [];
+  for (let i = 0; i < 10; i++) {
+    PARALLAX_LAYERS[1].items.push({
+      x: i * (W / 4) + Math.random() * 80,
+      type: Math.random() > 0.5 ? 'pine' : 'round',
+      h: 70 + Math.random() * 60,
+      trunk: 10 + Math.random() * 8,
+    });
+  }
+
+  // Ближние кусты
+  PARALLAX_LAYERS[2].items = [];
+  for (let i = 0; i < 14; i++) {
+    PARALLAX_LAYERS[2].items.push({
+      x: i * (W / 5) + Math.random() * 60,
+      type: Math.random() > 0.4 ? 'bush' : 'fence',
+      h: 22 + Math.random() * 18,
+    });
+  }
+}
+
+function updateParallax(dt) {
+  const moveSpeed = canvas.width / 3;
+  const boostMult = state.boost ? 2.5 : 1;
+
+  PARALLAX_LAYERS.forEach(layer => {
+    const dx = moveSpeed * layer.speed * boostMult * dt;
+    layer.items.forEach(item => {
+      item.x -= dx;
+      // Зацикливаем с запасом
+      const wrap = layer === PARALLAX_LAYERS[0] ? canvas.width * 2.2
+                 : layer === PARALLAX_LAYERS[1] ? canvas.width * 1.6
+                 : canvas.width * 1.4;
+      if (item.x < -300) item.x += wrap;
+    });
+  });
+}
+
+function drawParallax() {
+  const GY = GROUND_Y;
+
+  // ── Небо: градиент ──────────────────────────────
+  const sky = ctx.createLinearGradient(0, 0, 0, GY);
+  sky.addColorStop(0,   '#87CEEB');
+  sky.addColorStop(0.6, '#c8e8f7');
+  sky.addColorStop(1,   '#d4edda');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, GY);
+
+  // ── Дальние горы / холмы ─────────────────────────
+  ctx.fillStyle = 'rgba(120,170,100,0.45)';
+  ctx.beginPath();
+  ctx.moveTo(0, GY);
+  const hillCount = 6;
+  for (let i = 0; i <= hillCount; i++) {
+    const hx = (i / hillCount) * canvas.width;
+    const peak = GY - 80 - Math.sin(i * 1.3) * 40;
+    if (i === 0) ctx.lineTo(hx, peak);
+    else ctx.quadraticCurveTo(hx - canvas.width / hillCount / 2, GY - 55, hx, peak);
+  }
+  ctx.lineTo(canvas.width, GY); ctx.closePath(); ctx.fill();
+
+  // ── Слой 0: Облака ───────────────────────────────
+  PARALLAX_LAYERS[0].items.forEach(c => {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.shadowColor = 'rgba(200,220,255,0.5)';
+    ctx.shadowBlur = 12;
+    // три перекрытых эллипса = пушистое облако
+    ctx.beginPath(); ctx.ellipse(c.x,            c.y,          c.w * 0.5, c.h * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x + c.w * 0.3, c.y - c.h * 0.2, c.w * 0.35, c.h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x - c.w * 0.28, c.y - c.h * 0.1, c.w * 0.3,  c.h * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  });
+
+  // ── Слой 1: Дальние деревья ──────────────────────
+  PARALLAX_LAYERS[1].items.forEach(t => {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    const base = GY - 14;
+    if (t.type === 'pine') {
+      // ствол
+      ctx.fillStyle = '#6D4C41';
+      ctx.fillRect(t.x - 4, base - t.trunk, 8, t.trunk);
+      // три яруса треугольников
+      for (let tier = 0; tier < 3; tier++) {
+        const tH = t.h * (0.5 - tier * 0.1);
+        const tY = base - t.trunk - tier * (t.h * 0.28);
+        ctx.fillStyle = tier === 0 ? '#2E7D32' : tier === 1 ? '#388E3C' : '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(t.x, tY - tH);
+        ctx.lineTo(t.x - tH * 0.55, tY);
+        ctx.lineTo(t.x + tH * 0.55, tY);
+        ctx.closePath(); ctx.fill();
+      }
+    } else {
+      // круглое дерево
+      ctx.fillStyle = '#5D4037';
+      ctx.fillRect(t.x - 4, base - t.trunk, 8, t.trunk);
+      ctx.fillStyle = '#388E3C';
+      ctx.beginPath();
+      ctx.arc(t.x, base - t.trunk - t.h * 0.38, t.h * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#43A047';
+      ctx.beginPath();
+      ctx.arc(t.x - t.h * 0.12, base - t.trunk - t.h * 0.45, t.h * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // ── Слой 2: Ближние кусты / забор ────────────────
+  PARALLAX_LAYERS[2].items.forEach(item => {
+    ctx.save();
+    const base = GY - 12;
+    if (item.type === 'bush') {
+      ctx.fillStyle = '#2E7D32';
+      ctx.beginPath(); ctx.arc(item.x,             base - item.h * 0.5, item.h * 0.55, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#388E3C';
+      ctx.beginPath(); ctx.arc(item.x + item.h * 0.4, base - item.h * 0.4, item.h * 0.4,  0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(item.x - item.h * 0.38, base - item.h * 0.35, item.h * 0.35, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // секция забора: 3 столбика + перекладина
+      ctx.fillStyle = '#795548';
+      for (let p = 0; p < 3; p++) {
+        const px = item.x + p * 18;
+        ctx.fillRect(px, base - item.h, 5, item.h);
+        // заострённый верх
+        ctx.beginPath();
+        ctx.moveTo(px, base - item.h);
+        ctx.lineTo(px + 2.5, base - item.h - 8);
+        ctx.lineTo(px + 5, base - item.h);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#8D6E63';
+      ctx.fillRect(item.x - 2, base - item.h * 0.6, 54, 5);
+      ctx.fillRect(item.x - 2, base - item.h * 0.3, 54, 5);
+    }
+    ctx.restore();
+  });
+}
+
+// ─── ПЫЛЬ ─────────────────────────────────────────────────────────────────────
 let dustParticles = [];
 
 function spawnDust(x, groundY, boost) {
@@ -36,7 +201,7 @@ function drawDust() {
   });
 }
 
-// ─── ВСПЫШКА БУСТА ──────────────────────────────────
+// ─── ВСПЫШКА БУСТА ────────────────────────────────────────────────────────────
 let flash = { active: false, life: 0 };
 let burstParticles = [];
 let shake = { x: 0, y: 0, life: 0 };
@@ -44,8 +209,7 @@ let shake = { x: 0, y: 0, life: 0 };
 function triggerBoostFlash(px, py) {
   flash = { active: true, life: 1.0 };
   for (let i = 0; i < 24; i++) {
-    const angle = (i / 24) * Math.PI * 2;
-    const speed = 3 + Math.random() * 5;
+    const angle = (i / 24) * Math.PI * 2, speed = 3 + Math.random() * 5;
     burstParticles.push({
       x: px + 22, y: py - 40,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
@@ -79,6 +243,7 @@ function drawFlash() {
   });
 }
 
+// ─── INIT ──────────────────────────────────────────────────────────────────────
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx = canvas.getContext('2d');
@@ -86,6 +251,7 @@ function initGame() {
   LANE_WIDTH = canvas.width / LANES; GROUND_Y = canvas.height * 0.75;
   dustParticles = []; burstParticles = [];
   flash = { active: false, life: 0 }; shake = { x: 0, y: 0, life: 0 };
+  initParallax();
 
   state = {
     lane: 1, x: 0, y: GROUND_Y,
@@ -121,6 +287,7 @@ function bindControls() {
   });
 }
 
+// ─── ПЕРСОНАЖ ─────────────────────────────────────────────────────────────────
 function drawCharacter(x, ground, phase, isDucking, boost) {
   const t = phase * Math.PI * 2;
   const color = boost ? '#FFD700' : '#1565C0';
@@ -179,6 +346,7 @@ function spawnBoostStrip() {
   state.boosts.push({ x: canvas.width + 60, lane: Math.floor(Math.random() * 3) });
 }
 
+// ─── UPDATE ────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (!state.running) return;
   const runSpeed = state.boost ? 8 : 5;
@@ -191,6 +359,8 @@ function update(dt) {
       spawnDust(state.x, state.y, state.boost);
   }
   updateDust(dt); updateFlash(dt);
+  updateParallax(dt);
+
   state.timeLeft -= dt;
   if (state.timeLeft <= 0) { endGame('timeout'); return; }
   const speed = state.boost ? BASE_SPEED * 2.5 : BASE_SPEED;
@@ -228,16 +398,33 @@ function checkCollisions() {
   });
 }
 
+// ─── DRAW ──────────────────────────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(shake.x, shake.y);
-  ctx.fillStyle = '#2d5a27'; ctx.fillRect(-10, -10, canvas.width + 20, canvas.height + 20);
-  ctx.fillStyle = '#8B7355'; ctx.fillRect(0, GROUND_Y - 10, canvas.width, 120);
+
+  // 1. Параллакс-фон (небо + деревья + кусты)
+  drawParallax();
+
+  // 2. Дорожка
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(0, GROUND_Y - 10, canvas.width, 120);
+
+  // Тень под дорожкой
+  const roadShadow = ctx.createLinearGradient(0, GROUND_Y - 10, 0, GROUND_Y + 10);
+  roadShadow.addColorStop(0, 'rgba(0,0,0,0.18)');
+  roadShadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = roadShadow;
+  ctx.fillRect(0, GROUND_Y - 10, canvas.width, 20);
+
+  // Разметка полос
   for (let i = 1; i < LANES; i++) {
     ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.setLineDash([20, 15]);
     ctx.beginPath(); ctx.moveTo(LANE_WIDTH * i, GROUND_Y - 10); ctx.lineTo(LANE_WIDTH * i, GROUND_Y + 110);
     ctx.stroke(); ctx.setLineDash([]);
   }
+
+  // 3. Бусты и препятствия
   state.boosts.forEach(b => {
     ctx.fillStyle = '#FFF176'; ctx.fillRect(b.x, GROUND_Y - 10, 60, 120);
     ctx.fillStyle = '#FF6B00'; ctx.font = '20px sans-serif'; ctx.fillText('⚡', b.x + 15, GROUND_Y + 50);
@@ -250,15 +437,19 @@ function draw() {
     });
     if (o.type === 'ball') { ctx.font = '38px sans-serif'; ctx.fillText('🎈', o.x, o.y); }
   });
+
+  // 4. Пыль → персонаж
   drawDust();
   drawCharacter(state.x, state.y, state.step, state.isDucking, state.boost);
+
   ctx.restore();
   drawFlash();
+
   document.getElementById('timer').textContent = Math.ceil(state.timeLeft);
   document.getElementById('distance').textContent = state.distance.toFixed(2);
 }
 
-// ─── ЭКРАН РЕЗУЛЬТАТА ──────────────────────────────────
+// ─── ЭКРАН РЕЗУЛЬТАТА ─────────────────────────────────────────────────────────
 function getMedal(reason, score, elapsed) {
   if (reason === 'finish') {
     if (elapsed <= 30) return { icon: '🥇', label: 'Золотая медаль — спринтер!' };
@@ -272,34 +463,26 @@ function getMedal(reason, score, elapsed) {
 
 function endGame(reason) {
   state.running = false;
-
   const elapsed = parseFloat((GAME_DURATION - state.timeLeft).toFixed(1));
   const score   = parseFloat(state.distance.toFixed(2));
   const medal   = getMedal(reason, score, elapsed);
-
-  // Заполняем карточку
   if (reason === 'finish') {
-    document.getElementById('resultEmoji').textContent  = '🏁';
-    document.getElementById('resultTitle').textContent  = 'Финиш!';
+    document.getElementById('resultEmoji').textContent = '🏁';
+    document.getElementById('resultTitle').textContent = 'Финиш!';
   } else if (reason === 'timeout') {
-    document.getElementById('resultEmoji').textContent  = '⏰';
-    document.getElementById('resultTitle').textContent  = 'Время вышло!';
-    document.getElementById('resultTitle').style.color  = '#aaa';
+    document.getElementById('resultEmoji').textContent = '⏰';
+    document.getElementById('resultTitle').textContent = 'Время вышло!';
+    document.getElementById('resultTitle').style.color = '#aaa';
   } else {
-    document.getElementById('resultEmoji').textContent  = '💥';
-    document.getElementById('resultTitle').textContent  = 'Game Over';
-    document.getElementById('resultTitle').style.color  = '#ff5252';
+    document.getElementById('resultEmoji').textContent = '💥';
+    document.getElementById('resultTitle').textContent = 'Game Over';
+    document.getElementById('resultTitle').style.color = '#ff5252';
   }
-
   document.getElementById('statScore').textContent  = `${score} км`;
   document.getElementById('statTime').textContent   = `${elapsed}с`;
   document.getElementById('medal').textContent      = medal.icon;
   document.getElementById('medalLabel').textContent = medal.label;
-
-  // Показываем экран
   document.getElementById('result').classList.add('show');
-
-  // Отправляем данные в Telegram
   if (window.Telegram?.WebApp)
     Telegram.WebApp.sendData(JSON.stringify({ score, time: elapsed, reason }));
 }
