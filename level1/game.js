@@ -7,29 +7,36 @@ const GAME_DURATION = 60;
 const TOTAL_DIST   = 10;
 const BASE_SPEED   = TOTAL_DIST / GAME_DURATION;
 
-// Спрайтшит: 6 кадров горизонтально
 const FRAME_COUNT = 6;
-const FRAME_W     = 128;
-const FRAME_H     = 192;
 
-const SPRITE_W = 96;
-const SPRITE_H = 144;
+// Реальные размеры кадра — вычисляются после загрузки
+let realFrameW = 128;
+let realFrameH = 192;
+
+const SPRITE_W = 100;
+const SPRITE_H = 150;
 const ANIM_FPS = 12;
 
 const P = {
   left:    12,
-  right:   84,
+  right:   88,
   get fullTop() { return -SPRITE_H; },
   get duckTop()  { return -Math.round(SPRITE_H * 0.55); },
 };
 
 let runImg      = null;
 let fallbackImg = null;
-let imgMode     = 'none'; // 'sheet' | 'single' | 'none'
+let imgMode     = 'none';
 
 function loadAssets(cb) {
   runImg = new Image();
-  runImg.onload  = () => { imgMode = 'sheet';  cb(); };
+  runImg.onload = () => {
+    // Вычисляем размер одного кадра из реальных размеров картинки
+    realFrameW = Math.floor(runImg.naturalWidth / FRAME_COUNT);
+    realFrameH = runImg.naturalHeight;
+    imgMode = 'sheet';
+    cb();
+  };
   runImg.onerror = () => {
     fallbackImg = new Image();
     fallbackImg.onload  = () => { imgMode = 'single'; cb(); };
@@ -41,7 +48,7 @@ function loadAssets(cb) {
 
 let state = {};
 
-// ─── ПАРАЛЛАКС ──────────────────────────────────────────────────────────────────
+// ─── ПАРАЛЛАКС ────────────────────────────────────────────────────────────────────
 const PARALLAX_LAYERS = [
   { speed: 0.08, items: [] },
   { speed: 0.30, items: [] },
@@ -181,18 +188,14 @@ function obstacleBox(o) {
 function boostBox(b) { return { x1: b.x, x2: b.x + 44, y1: GROUND_Y - 170, y2: GROUND_Y - 120 }; }
 function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────────
+// ─── INIT ───────────────────────────────────────────────────────────────────────
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
-
-  // GROUND_Y = линия земли. Персонаж стоит ногами на GROUND_Y.
-  // Ставим на 65% высоты — небо сверху, земля снизу, персонаж виден полностью.
   GROUND_Y = Math.round(canvas.height * 0.65);
   PLAYER_X = Math.round(canvas.width  * 0.12);
-
   dustParticles = []; burstParticles = [];
   flash = { active: false, life: 0 };
   shake = { x: 0, y: 0, life: 0 };
@@ -212,7 +215,7 @@ function initGame() {
   loadAssets(() => loop());
 }
 
-// ─── УПРАВЛЕНИЕ ─────────────────────────────────────────────────────────────────
+// ─── УПРАВЛЕНИЕ ───────────────────────────────────────────────────────────────
 let touchStartY = 0;
 function bindControls() {
   const doJump = () => { if (!state.isJumping) { state.vy = -15; state.isJumping = true; } };
@@ -261,7 +264,7 @@ function drawCharacter() {
   let dW = SPRITE_W;
   let dH = SPRITE_H;
   let dX = PLAYER_X;
-  let dY = groundY - dH;  // верхняя грань = ноги - высота
+  let dY = groundY - dH;
 
   if (duck) {
     dH = Math.round(SPRITE_H * 0.55);
@@ -280,8 +283,10 @@ function drawCharacter() {
 
   if (imgMode === 'sheet') {
     const frameIdx = jumping ? 2 : state.frame;
-    ctx.drawImage(runImg,
-      frameIdx * FRAME_W, 0, FRAME_W, FRAME_H,
+    // Используем реальные размеры кадра из naturalWidth/Height
+    ctx.drawImage(
+      runImg,
+      frameIdx * realFrameW, 0, realFrameW, realFrameH,
       dX, dY, dW, dH
     );
   } else if (imgMode === 'single') {
@@ -293,7 +298,7 @@ function drawCharacter() {
   ctx.restore();
 }
 
-// ─── ОБЪЕКТЫ ────────────────────────────────────────────────────────────────────
+// ─── ОБЪЕКТЫ ───────────────────────────────────────────────────────────────────
 function spawnObstacle() {
   state.obstacles.push({ type: Math.random() > 0.5 ? 'low' : 'high', x: canvas.width + 40 });
 }
@@ -327,7 +332,7 @@ function drawBoosts() {
   });
 }
 
-// ─── UPDATE ──────────────────────────────────────────────────────────────────────
+// ─── UPDATE ─────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (!state.running) return;
 
@@ -367,7 +372,7 @@ function update(dt) {
   checkCollisions();
 }
 
-// ─── КОЛЛИЗИИ ───────────────────────────────────────────────────────────────────
+// ─── КОЛЛИЗИИ ────────────────────────────────────────────────────────────────
 function checkCollisions() {
   const pb = playerBox();
   state.obstacles.forEach(o => { if (overlaps(pb, obstacleBox(o))) endGame('hit'); });
@@ -379,7 +384,7 @@ function checkCollisions() {
   });
 }
 
-// ─── DRAW ────────────────────────────────────────────────────────────────────────
+// ─── DRAW ──────────────────────────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(shake.x, shake.y);
