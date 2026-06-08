@@ -1,23 +1,25 @@
 let canvas, ctx;
 let GROUND_Y;
-let PLAYER_X;  // устанавливается в initGame — 20% ширины экрана
+let PLAYER_X;
 
-const GRAVITY = 0.6;
+const GRAVITY      = 0.6;
 const GAME_DURATION = 60;
-const TOTAL_DIST = 10;
-const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
+const TOTAL_DIST   = 10;
+const BASE_SPEED   = TOTAL_DIST / GAME_DURATION;
 
 // Спрайтшит: 6 кадров горизонтально
-const FRAME_COUNT  = 6;
-const FRAME_W      = 128;
-const FRAME_H      = 192;
-const SPRITE_W     = 80;   // размер на экране (чуть крупнее)
-const SPRITE_H     = 120;
-const ANIM_FPS     = 12;
+const FRAME_COUNT = 6;
+const FRAME_W     = 128;
+const FRAME_H     = 192;
+
+// Размер на экране — крупнее
+const SPRITE_W = 96;
+const SPRITE_H = 144;
+const ANIM_FPS = 12;
 
 const P = {
-  left:    10,
-  right:   70,
+  left:    12,
+  right:   84,
   get fullTop() { return -SPRITE_H; },
   get duckTop()  { return -Math.round(SPRITE_H * 0.55); },
 };
@@ -28,7 +30,7 @@ let imgMode     = 'none'; // 'sheet' | 'single' | 'none'
 
 function loadAssets(cb) {
   runImg = new Image();
-  runImg.onload = () => { imgMode = 'sheet'; cb(); };
+  runImg.onload  = () => { imgMode = 'sheet';  cb(); };
   runImg.onerror = () => {
     fallbackImg = new Image();
     fallbackImg.onload  = () => { imgMode = 'single'; cb(); };
@@ -124,7 +126,7 @@ function drawParallax() {
 let dustParticles = [];
 function spawnDust(boost) {
   for (let i = 0; i < (boost ? 3 : 1); i++)
-    dustParticles.push({ x: PLAYER_X + 10 + Math.random() * 24, y: GROUND_Y - 2, vx: -(1.5 + Math.random() * 2.5), vy: -(0.5 + Math.random() * 1.5), r: boost ? 4 + Math.random() * 5 : 2 + Math.random() * 4, life: 1.0, decay: 0.04 + Math.random() * 0.04, color: boost ? '255,200,50' : '180,150,100' });
+    dustParticles.push({ x: PLAYER_X + 10 + Math.random() * 30, y: GROUND_Y - 2, vx: -(1.5 + Math.random() * 2.5), vy: -(0.5 + Math.random() * 1.5), r: boost ? 4 + Math.random() * 5 : 2 + Math.random() * 4, life: 1.0, decay: 0.04 + Math.random() * 0.04, color: boost ? '255,200,50' : '180,150,100' });
 }
 function updateDust(dt) {
   dustParticles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.r *= 0.97; p.life -= p.decay; });
@@ -174,10 +176,10 @@ function playerBox() {
   };
 }
 function obstacleBox(o) {
-  if (o.type === 'low') return { x1: o.x + 4, x2: o.x + 46, y1: GROUND_Y - 56, y2: GROUND_Y - 4 };
-  return { x1: o.x + 4, x2: o.x + 44, y1: GROUND_Y - 130, y2: GROUND_Y - 75 };
+  if (o.type === 'low') return { x1: o.x + 4, x2: o.x + 50, y1: GROUND_Y - 60, y2: GROUND_Y - 4 };
+  return { x1: o.x + 4, x2: o.x + 48, y1: GROUND_Y - 140, y2: GROUND_Y - 80 };
 }
-function boostBox(b) { return { x1: b.x, x2: b.x + 40, y1: GROUND_Y - 160, y2: GROUND_Y - 110 }; }
+function boostBox(b) { return { x1: b.x, x2: b.x + 44, y1: GROUND_Y - 170, y2: GROUND_Y - 120 }; }
 function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
 // ─── INIT ───────────────────────────────────────────────────────────────────────
@@ -186,8 +188,8 @@ function initGame() {
   ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
-  GROUND_Y  = Math.round(canvas.height * 0.72);  // линия земли — 72% высоты
-  PLAYER_X  = Math.round(canvas.width  * 0.15);  // персонаж — 15% ширины (левая треть)
+  GROUND_Y = Math.round(canvas.height * 0.72);
+  PLAYER_X = Math.round(canvas.width  * 0.12);  // 12% ширины
   dustParticles = []; burstParticles = [];
   flash = { active: false, life: 0 };
   shake = { x: 0, y: 0, life: 0 };
@@ -224,28 +226,28 @@ function bindControls() {
   });
 }
 
-// ─── СТИК-ФИГУР (fallback) ────────────────────────────────────────────────────
+// ─── СТИК-ФИГУР ───────────────────────────────────────────────────────────────────
 function drawStickFigure(dX, dY, dW, dH, step, boost) {
   const cx = dX + dW / 2;
   const s  = Math.sin(step * Math.PI * 2);
   ctx.strokeStyle = boost ? '#FFD700' : '#1a237e';
   ctx.fillStyle   = boost ? '#FFD700' : '#1565C0';
-  ctx.lineWidth   = 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(cx, dY + dH * 0.12, dH * 0.1, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx, dY + dH * 0.22); ctx.lineTo(cx, dY + dH * 0.6); ctx.stroke();
+  ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx, dY + dH * 0.1, dH * 0.09, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx, dY + dH * 0.2); ctx.lineTo(cx, dY + dH * 0.58); ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(cx, dY + dH * 0.3); ctx.lineTo(cx - dW * 0.3, dY + dH * 0.45 + s * dH * 0.08);
-  ctx.moveTo(cx, dY + dH * 0.3); ctx.lineTo(cx + dW * 0.3, dY + dH * 0.45 - s * dH * 0.08);
+  ctx.moveTo(cx, dY + dH * 0.28); ctx.lineTo(cx - dW * 0.32, dY + dH * 0.44 + s * dH * 0.07);
+  ctx.moveTo(cx, dY + dH * 0.28); ctx.lineTo(cx + dW * 0.32, dY + dH * 0.44 - s * dH * 0.07);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(cx, dY + dH * 0.6); ctx.lineTo(cx - dW * 0.2, dY + dH * 0.85 - s * dH * 0.1);
-  ctx.moveTo(cx, dY + dH * 0.6); ctx.lineTo(cx + dW * 0.2, dY + dH * 0.85 + s * dH * 0.1);
+  ctx.moveTo(cx, dY + dH * 0.58); ctx.lineTo(cx - dW * 0.22, dY + dH * 0.88 - s * dH * 0.1);
+  ctx.moveTo(cx, dY + dH * 0.58); ctx.lineTo(cx + dW * 0.22, dY + dH * 0.88 + s * dH * 0.1);
   ctx.stroke();
 }
 
 // ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
 function drawCharacter() {
-  const groundY = state.y;
+  const groundY = state.y;          // Y земли (ноги)
   const duck    = state.isDucking;
   const jumping = state.isJumping;
   const boost   = state.boost;
@@ -253,16 +255,18 @@ function drawCharacter() {
 
   ctx.save();
 
+  // Текущий размер
   let dW = SPRITE_W;
   let dH = SPRITE_H;
   let dX = PLAYER_X;
-  let dY = groundY - SPRITE_H;
+  // dY: верхняя грань спрайта = groundY - dH
+  let dY = groundY - dH;
 
   if (duck) {
     dH = Math.round(SPRITE_H * 0.55);
     dW = Math.round(SPRITE_W * 1.2);
     dX = PLAYER_X - Math.round((dW - SPRITE_W) / 2);
-    dY = groundY - dH;
+    dY = groundY - dH;  // ноги всегда на земле
   }
 
   if (boost && !duck) {
@@ -275,7 +279,10 @@ function drawCharacter() {
 
   if (imgMode === 'sheet') {
     const frameIdx = jumping ? 2 : state.frame;
-    ctx.drawImage(runImg, frameIdx * FRAME_W, 0, FRAME_W, FRAME_H, dX, dY, dW, dH);
+    ctx.drawImage(runImg,
+      frameIdx * FRAME_W, 0, FRAME_W, FRAME_H,  // источник
+      dX, dY, dW, dH                             // дестинация
+    );
   } else if (imgMode === 'single') {
     ctx.drawImage(fallbackImg, dX, dY, dW, dH);
   } else {
@@ -387,7 +394,7 @@ function draw() {
   drawCharacter();
   if (state.timeLeft > 55) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 140);
+    ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 160);
     ctx.textAlign = 'left';
   }
   ctx.restore();
