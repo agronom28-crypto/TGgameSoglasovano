@@ -5,17 +5,13 @@ const GRAVITY = 0.6;
 const GAME_DURATION = 60;
 const TOTAL_DIST = 10;
 const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
-const PLAYER_X = 80;       // фиксированная X
+const PLAYER_X = 80;
 
-// Хитбокс персонажа (относительно PLAYER_X / state.y)
-// Персонаж рисуется state.y = земля (ниж ноги)
-// рост — 80px, ширина тела — 32px
 const P = {
-  left:   6,   // смещение от PLAYER_X
+  left:   6,
   right: 38,
-  // верх — динамически: полный рост / приседание
-  fullTop: -78, // state.y + P.fullTop = верхняя граница стоя
-  duckTop: -44, // верхняя граница приседания
+  fullTop: -78,
+  duckTop: -44,
 };
 
 let state = {};
@@ -114,7 +110,7 @@ function drawDust() {
   dustParticles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(${p.color},${p.life * 0.7})`; ctx.fill(); });
 }
 
-// ─── БУСТ-ВСПЫШКА ─────────────────────────────────────────────────────────────
+// ─── БУСТ-ВСПЫШКА ───────────────────────────────────────────────────────────
 let flash = { active: false, life: 0 };
 let burstParticles = [];
 let shake = { x: 0, y: 0, life: 0 };
@@ -144,34 +140,26 @@ function drawFlash() {
 }
 
 // ─── ХИТБОКСЫ ────────────────────────────────────────────────────────────────────
-// Возвращает { x1, y1, x2, y2 } хитбокса персонажа в мировых координатах
 function playerBox() {
   const duck = state.isDucking;
   return {
     x1: PLAYER_X + P.left,
     x2: PLAYER_X + P.right,
     y1: state.y + (duck ? P.duckTop : P.fullTop),
-    y2: state.y,   // ноги на земле
+    y2: state.y,
   };
 }
-
-// Возвращает хитбокс препятствия
-// low: собака стоит на земле, высота 50px
-// high: шарик на уровне головы стоящего персонажа
 function obstacleBox(o) {
   if (o.type === 'low') {
     return { x1: o.x + 4, x2: o.x + 38, y1: GROUND_Y - 46, y2: GROUND_Y - 4 };
   } else {
-    // Шарик висит на высоте головы стоящего персонажа
     return { x1: o.x + 4, x2: o.x + 36, y1: GROUND_Y - 110, y2: GROUND_Y - 62 };
   }
 }
-
 function boostBox(b) {
-  return { x1: b.x, x2: b.x + 32, y1: b.y - 28, y2: b.y + 4 };
+  // Буст висит высоко — на уровне верхушки прыжка
+  return { x1: b.x, x2: b.x + 32, y1: GROUND_Y - 130, y2: GROUND_Y - 90 };
 }
-
-// Простое AABB
 function overlaps(a, b) {
   return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
 }
@@ -275,15 +263,11 @@ function drawObstacles() {
   state.obstacles.forEach(o => {
     const b = obstacleBox(o);
     if (o.type === 'low') {
-      // Собака: рисуем строго внутри хитбокса
       ctx.font = '40px sans-serif';
       ctx.fillText('🐕', b.x1 - 2, b.y2 + 2);
     } else {
-      // Шарик: центр emoji = центр хитбокса
-      const cx = (b.x1 + b.x2) / 2;
-      ctx.font = '38px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🎈', cx, b.y2 + 4);
+      ctx.font = '38px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🎈', (b.x1 + b.x2) / 2, b.y2 + 4);
       ctx.textAlign = 'left';
     }
   });
@@ -295,10 +279,18 @@ function drawBoosts() {
     const box = boostBox(b);
     const cx = (box.x1 + box.x2) / 2;
     ctx.save();
+    // Если стоишь на земле — буст полупрозрачный, подсказка стрелкой
+    ctx.globalAlpha = state.isJumping ? 1 : 0.35;
     ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18 * pulse;
-    ctx.font = `${Math.round(30 * pulse)}px sans-serif`;
-    ctx.textAlign = 'center';
+    ctx.font = `${Math.round(30 * pulse)}px sans-serif`; ctx.textAlign = 'center';
     ctx.fillText('⚡', cx, box.y2);
+    // Стрелка вниз (подсказка игроку прыгнуть)
+    if (!state.isJumping) {
+      ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 300) * 0.3;
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#FFD700';
+      ctx.fillText('↑', cx, box.y2 + 26);
+    }
     ctx.textAlign = 'left';
     ctx.restore();
   });
@@ -342,7 +334,8 @@ function checkCollisions() {
     if (overlaps(pb, obstacleBox(o))) endGame('hit');
   });
   state.boosts = state.boosts.filter(b => {
-    if (overlaps(pb, boostBox(b))) {
+    // Подбирается ТОЛЬКО в прыжке
+    if (state.isJumping && overlaps(pb, boostBox(b))) {
       state.boost = true; state.boostTimer = 5;
       triggerBoostFlash();
       return false;
@@ -356,7 +349,6 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(shake.x, shake.y);
   drawParallax();
-  // Дорожка
   ctx.fillStyle = '#8B7355';
   ctx.fillRect(0, GROUND_Y - 10, canvas.width, canvas.height - GROUND_Y + 10);
   const rs = ctx.createLinearGradient(0, GROUND_Y - 10, 0, GROUND_Y + 10);
@@ -366,7 +358,6 @@ function draw() {
   drawObstacles();
   drawDust();
   drawCharacter(PLAYER_X, state.y, state.step, state.isDucking, state.boost);
-  // Подсказка в начале
   if (state.timeLeft > 55) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 120);
