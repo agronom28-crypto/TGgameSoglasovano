@@ -14,6 +14,19 @@ body { background: #1a1a2e; overflow: hidden; font-family: sans-serif; }
   object-fit: cover;
   z-index: 0;
 }
+
+/* ── ПУЛЬСАЦИЯ ── */
+@keyframes pulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+  50%  { transform: scale(1.08); box-shadow: 0 0 56px rgba(255,140,0,1),   0 8px 24px rgba(0,0,0,0.5); }
+  100% { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+}
+
+@keyframes glowRing {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.7); }
+}
+
 #playBtn {
   position: relative; z-index: 1;
   margin-bottom: 60px;
@@ -28,11 +41,23 @@ body { background: #1a1a2e; overflow: hidden; font-family: sans-serif; }
   border-radius: 50px;
   box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5);
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s;
+  animation: pulse 1.6s ease-in-out infinite;
 }
+
+/* Кольцо расходящегося свечения */
+#playBtn::before {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 50px;
+  border: 3px solid rgba(255,180,0,0.8);
+  animation: glowRing 1.6s ease-out infinite;
+  pointer-events: none;
+}
+
 #playBtn:active {
-  transform: scale(0.95);
-  box-shadow: 0 0 16px rgba(255,140,0,0.5);
+  transform: scale(0.95) !important;
+  animation: none;
+  box-shadow: 0 0 16px rgba(255,140,0,0.4);
 }
 
 /* ── ИГРА ── */
