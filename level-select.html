@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="level-select.css">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    /* Оверлей интро-видео */
     #introOverlay {
       display: none;
       position: fixed; inset: 0; z-index: 999;
@@ -40,10 +39,9 @@
 </head>
 <body>
 
-  <!-- ИНТРО-ОВЕРЛЕЙ (скрыт по умолчанию) -->
   <div id="introOverlay">
     <video id="introVid" playsinline preload="none">
-      <source src="Pictures/main_level1_video.mp4" type="video/mp4">
+      <source id="introSrc" src="" type="video/mp4">
     </video>
     <button id="introSkip">Пропустить ▶▶</button>
     <button id="introBack" onclick="closeIntro()">← Уровни</button>
@@ -58,16 +56,16 @@
 
   <script>
     const LEVELS = [
-      { n: 1,  title: 'Забег',          sub: '10 км до офиса',    img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
-      { n: 2,  title: 'Собеседование',  sub: 'Пройди HR-фильтр', img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: null },
-      { n: 3,  title: 'Совещание',      sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 4,  title: 'Согласование',   sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 5,  title: 'Командировка',   sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 6,  title: 'Аудит',          sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 7,  title: 'Презентация',    sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 8,  title: 'Дедлайн',        sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 9,  title: 'Корпоратив',     sub: 'Скоро...',           img: null, path: null, intro: null },
-      { n: 10, title: 'Финал',          sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 1,  title: 'Забег',         sub: '10 км до офиса',   img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
+      { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр', img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
+      { n: 3,  title: 'Совещание',     sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 4,  title: 'Согласование',  sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 5,  title: 'Командировка',  sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 6,  title: 'Аудит',         sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 7,  title: 'Презентация',   sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 8,  title: 'Дедлайн',       sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 9,  title: 'Корпоратив',    sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 10, title: 'Финал',         sub: 'Скоро...',          img: null, path: null, intro: null },
     ];
 
     function isUnlocked(n) {
@@ -76,11 +74,10 @@
       return false;
     }
 
-    // Текущий путь перехода после видео
     let pendingPath = null;
-
     const overlay  = document.getElementById('introOverlay');
     const introVid = document.getElementById('introVid');
+    const introSrc = document.getElementById('introSrc');
     const skipBtn  = document.getElementById('introSkip');
 
     skipBtn.onclick = () => goToLevel();
@@ -88,15 +85,11 @@
 
     function playIntro(src, path) {
       pendingPath = path;
-      // Меняем источник если нужно
-      const source = introVid.querySelector('source');
-      if (source.src !== new URL(src, location.href).href) {
-        source.src = src;
-        introVid.load();
-      }
+      introSrc.src = src;
+      introVid.load();
       overlay.classList.add('show');
       introVid.currentTime = 0;
-      introVid.play(); // внутри обработчика onclick — жест пользователя есть
+      introVid.play();
     }
 
     function goToLevel() {
@@ -119,17 +112,14 @@
 
         const bg = document.createElement('div');
         bg.className = 'card-bg';
-        if (lvl.img) {
-          bg.style.backgroundImage = `url('${lvl.img}')`;
-        } else {
-          bg.style.background = 'linear-gradient(135deg, #1a237e 0%, #0d1b3e 100%)';
-        }
+        if (lvl.img) bg.style.backgroundImage = `url('${lvl.img}')`;
+        else bg.style.background = 'linear-gradient(135deg,#1a237e 0%,#0d1b3e 100%)';
         card.appendChild(bg);
 
         if (!unlocked) {
-          const overlay = document.createElement('div');
-          overlay.className = 'card-overlay';
-          card.appendChild(overlay);
+          const ov = document.createElement('div');
+          ov.className = 'card-overlay';
+          card.appendChild(ov);
           const lock = document.createElement('div');
           lock.className = 'lock-icon';
           lock.textContent = '🔒';
@@ -138,7 +128,7 @@
 
         const badge = document.createElement('div');
         badge.className = 'level-badge';
-        badge.textContent = `${lvl.n}`;
+        badge.textContent = lvl.n;
         card.appendChild(badge);
 
         const info = document.createElement('div');
@@ -150,13 +140,7 @@
           const btn = document.createElement('button');
           btn.className = 'play-btn';
           btn.textContent = 'ИГРАТЬ';
-          btn.onclick = () => {
-            if (lvl.intro) {
-              playIntro(lvl.intro, lvl.path); // жест пользователя → запуск видео
-            } else {
-              window.location.href = lvl.path; // без интро
-            }
-          };
+          btn.onclick = () => lvl.intro ? playIntro(lvl.intro, lvl.path) : (window.location.href = lvl.path);
           card.appendChild(btn);
         }
 
