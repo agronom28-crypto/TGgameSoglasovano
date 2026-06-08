@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Согласовано?</title>
+  <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1117; overflow: hidden; font-family: sans-serif; }
+
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+    }
+    #coverImg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; z-index: 0;
+    }
+
+    @keyframes pulse {
+      0%   { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+      50%  { transform: scale(1.08); box-shadow: 0 0 56px rgba(255,140,0,1),   0 8px 24px rgba(0,0,0,0.5); }
+      100% { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+    }
+    @keyframes glowRing {
+      0%   { opacity: 0.6; transform: scale(1); }
+      100% { opacity: 0;   transform: scale(1.7); }
+    }
+
+    #playBtn {
+      position: relative; z-index: 1; margin-bottom: 60px;
+      padding: 18px 64px; font-size: 26px; font-weight: 900;
+      letter-spacing: 4px; text-transform: uppercase; color: #fff;
+      background: linear-gradient(135deg, #FF6B00, #FFB300);
+      border: 3px solid rgba(255,255,255,0.5); border-radius: 50px;
+      box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5);
+      cursor: pointer; animation: pulse 1.6s ease-in-out infinite;
+    }
+    #playBtn::before {
+      content: ''; position: absolute; inset: -6px; border-radius: 50px;
+      border: 3px solid rgba(255,180,0,0.8);
+      animation: glowRing 1.6s ease-out infinite; pointer-events: none;
+    }
+    #playBtn:active { transform: scale(0.95) !important; animation: none; }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <img src="Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
+    <button id="playBtn" onclick="window.location.href='level-select.html'">▶ PLAY</button>
+  </div>
+</body>
+</html>

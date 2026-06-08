@@ -3,20 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Согласовано?</title>
+  <title>Уровень 1 — Согласовано?</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="preload" href="../Main.png" as="image">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <script defer src="game.js"></script>
 </head>
 <body>
-
-  <!-- ЗАСТАВКА -->
-  <div id="splash">
-    <img src="../Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
-    <button id="backBtn" onclick="history.back()">← Уровни</button>
-    <button id="playBtn" onclick="startIntro()">▶ PLAY</button>
-  </div>
 
   <!-- ИНТРО-РОЛИК -->
   <div id="introScreen">
@@ -24,6 +16,7 @@
       <source src="../Pictures/main_level1_video.mp4" type="video/mp4">
     </video>
     <button id="introSkipBtn" onclick="startGame()">Пропустить ▶▶</button>
+    <button id="backBtn" onclick="history.back()">← Уровни</button>
   </div>
 
   <!-- ИГРА -->
@@ -50,7 +43,6 @@
       <div id="frMedal">🥇</div>
       <div id="frMedalLabel"></div>
 
-      <!-- БАННЕР ПЕРЕХОДА НА УРОВЕНЬ 2 -->
       <div id="level2Banner">
         <div id="lvl2Badge">УРОВЕНЬ 2</div>
         <div id="lvl2Text">Ты в офисе. Впереди — собеседование!</div>
@@ -85,22 +77,19 @@
   </div>
 
   <script>
-    function startIntro() {
-      document.getElementById('splash').style.display = 'none';
-      const introScreen = document.getElementById('introScreen');
-      introScreen.style.display = 'flex';
+    // Автозапуск интро-видео при загрузке страницы
+    window.addEventListener('load', () => {
       const video = document.getElementById('introVideo');
-      video.currentTime = 0;
       const p = video.play();
-      if (p !== undefined) p.catch(() => startGame());
+      if (p !== undefined) p.catch(() => {}); // игнорируем блокировку автоплей
       video.onended = () => startGame();
-    }
+    });
 
     function startGame() {
       document.getElementById('introScreen').style.display = 'none';
       document.getElementById('introVideo').pause();
       document.getElementById('gameWrapper').style.display = 'block';
-      initGame();
+      if (typeof initGame === 'function') initGame();
     }
 
     function goLevel2() {
@@ -126,20 +115,10 @@
   </script>
 
   <style>
-    #backBtn {
-      position: absolute; top: 18px; left: 18px; z-index: 2;
-      background: rgba(0,0,0,0.5); color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px; padding: 8px 16px;
-      font-size: 14px; cursor: pointer;
-    }
-    #backBtn:active { opacity: 0.7; }
-
-    /* ИНТРО-ЭКРАН */
     #introScreen {
-      display: none;
       position: fixed; inset: 0; z-index: 150;
       background: #000;
+      display: flex;
       align-items: center; justify-content: center;
     }
     #introVideo {
@@ -155,6 +134,14 @@
       font-size: 15px; cursor: pointer;
     }
     #introSkipBtn:active { opacity: 0.7; }
+    #backBtn {
+      position: absolute; top: 18px; left: 18px; z-index: 10;
+      background: rgba(0,0,0,0.5); color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 8px 16px;
+      font-size: 14px; cursor: pointer;
+    }
+    #backBtn:active { opacity: 0.7; }
   </style>
 </body>
 </html>
