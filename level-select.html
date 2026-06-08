@@ -6,8 +6,48 @@
   <title>Выбор уровня — Согласовано?</title>
   <link rel="stylesheet" href="level-select.css">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Оверлей интро-видео */
+    #introOverlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 999;
+      background: #000;
+      align-items: center; justify-content: center;
+    }
+    #introOverlay.show { display: flex; }
+    #introVid {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    #introSkip {
+      position: absolute; top: 18px; right: 18px; z-index: 10;
+      background: rgba(0,0,0,0.55); color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 8px 18px;
+      font-size: 15px; cursor: pointer;
+    }
+    #introSkip:active { opacity: 0.7; }
+    #introBack {
+      position: absolute; top: 18px; left: 18px; z-index: 10;
+      background: rgba(0,0,0,0.5); color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 8px 16px;
+      font-size: 14px; cursor: pointer;
+    }
+    #introBack:active { opacity: 0.7; }
+  </style>
 </head>
 <body>
+
+  <!-- ИНТРО-ОВЕРЛЕЙ (скрыт по умолчанию) -->
+  <div id="introOverlay">
+    <video id="introVid" playsinline preload="none">
+      <source src="Pictures/main_level1_video.mp4" type="video/mp4">
+    </video>
+    <button id="introSkip">Пропустить ▶▶</button>
+    <button id="introBack" onclick="closeIntro()">← Уровни</button>
+  </div>
 
   <div id="header">
     <div id="headerTitle">ВЫБЕРИ УРОВЕНЬ</div>
@@ -18,22 +58,56 @@
 
   <script>
     const LEVELS = [
-      { n: 1,  title: 'Забег',          sub: '10 км до офиса',       img: 'Pictures/Main_level%201.png', path: 'level1/index.html' },
-      { n: 2,  title: 'Собеседование',  sub: 'Пройди HR-фильтр',      img: 'Pictures/MainLevel2.png',     path: 'level2/index.html' },
-      { n: 3,  title: 'Совещание',      sub: 'Скоро...',              img: null, path: null },
-      { n: 4,  title: 'Согласование',   sub: 'Скоро...',              img: null, path: null },
-      { n: 5,  title: 'Командировка',   sub: 'Скоро...',              img: null, path: null },
-      { n: 6,  title: 'Аудит',          sub: 'Скоро...',              img: null, path: null },
-      { n: 7,  title: 'Презентация',    sub: 'Скоро...',              img: null, path: null },
-      { n: 8,  title: 'Дедлайн',        sub: 'Скоро...',              img: null, path: null },
-      { n: 9,  title: 'Корпоратив',     sub: 'Скоро...',              img: null, path: null },
-      { n: 10, title: 'Финал',          sub: 'Скоро...',              img: null, path: null },
+      { n: 1,  title: 'Забег',          sub: '10 км до офиса',    img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
+      { n: 2,  title: 'Собеседование',  sub: 'Пройди HR-фильтр', img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: null },
+      { n: 3,  title: 'Совещание',      sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 4,  title: 'Согласование',   sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 5,  title: 'Командировка',   sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 6,  title: 'Аудит',          sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 7,  title: 'Презентация',    sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 8,  title: 'Дедлайн',        sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 9,  title: 'Корпоратив',     sub: 'Скоро...',           img: null, path: null, intro: null },
+      { n: 10, title: 'Финал',          sub: 'Скоро...',           img: null, path: null, intro: null },
     ];
 
     function isUnlocked(n) {
       if (n === 1) return true;
       if (n === 2) return !!localStorage.getItem('level1_done');
       return false;
+    }
+
+    // Текущий путь перехода после видео
+    let pendingPath = null;
+
+    const overlay  = document.getElementById('introOverlay');
+    const introVid = document.getElementById('introVid');
+    const skipBtn  = document.getElementById('introSkip');
+
+    skipBtn.onclick = () => goToLevel();
+    introVid.onended = () => goToLevel();
+
+    function playIntro(src, path) {
+      pendingPath = path;
+      // Меняем источник если нужно
+      const source = introVid.querySelector('source');
+      if (source.src !== new URL(src, location.href).href) {
+        source.src = src;
+        introVid.load();
+      }
+      overlay.classList.add('show');
+      introVid.currentTime = 0;
+      introVid.play(); // внутри обработчика onclick — жест пользователя есть
+    }
+
+    function goToLevel() {
+      introVid.pause();
+      if (pendingPath) window.location.href = pendingPath;
+    }
+
+    function closeIntro() {
+      introVid.pause();
+      overlay.classList.remove('show');
+      pendingPath = null;
     }
 
     function buildGrid() {
@@ -43,7 +117,6 @@
         const card = document.createElement('div');
         card.className = 'card' + (unlocked ? ' unlocked' : ' locked');
 
-        // Фон-картинка
         const bg = document.createElement('div');
         bg.className = 'card-bg';
         if (lvl.img) {
@@ -53,36 +126,37 @@
         }
         card.appendChild(bg);
 
-        // Оверлей затемнения для заблюренных
         if (!unlocked) {
           const overlay = document.createElement('div');
           overlay.className = 'card-overlay';
           card.appendChild(overlay);
-
           const lock = document.createElement('div');
           lock.className = 'lock-icon';
           lock.textContent = '🔒';
           card.appendChild(lock);
         }
 
-        // Бейдж номера
         const badge = document.createElement('div');
         badge.className = 'level-badge';
         badge.textContent = `${lvl.n}`;
         card.appendChild(badge);
 
-        // Подпись
         const info = document.createElement('div');
         info.className = 'card-info';
         info.innerHTML = `<div class="card-title">${lvl.title}</div><div class="card-sub">${lvl.sub}</div>`;
         card.appendChild(info);
 
-        // Кнопка «ИГРАТЬ» только для разблокированных
         if (unlocked && lvl.path) {
           const btn = document.createElement('button');
           btn.className = 'play-btn';
           btn.textContent = 'ИГРАТЬ';
-          btn.onclick = () => { window.location.href = lvl.path; };
+          btn.onclick = () => {
+            if (lvl.intro) {
+              playIntro(lvl.intro, lvl.path); // жест пользователя → запуск видео
+            } else {
+              window.location.href = lvl.path; // без интро
+            }
+          };
           card.appendChild(btn);
         }
 
