@@ -33,7 +33,7 @@
     </video>
     <button id="skipBtn" onclick="showFinishResult()">Пропустить ▶▶</button>
 
-    <!-- Табличка с результатом поверх видео (скрыта до конца ролика) -->
+    <!-- Табличка с результатом поверх видео -->
     <div id="finishResult">
       <div id="frEmoji">🏁</div>
       <div id="frTitle">Финиш!</div>
@@ -41,6 +41,14 @@
       <div class="stat-row">📏 Дистанция <span id="frScore">0 км</span></div>
       <div id="frMedal">🥇</div>
       <div id="frMedalLabel"></div>
+
+      <!-- БАННЕР ПЕРЕХОДА НА УРОВЕНЬ 2 -->
+      <div id="level2Banner">
+        <div id="lvl2Badge">УРОВЕНЬ 2</div>
+        <div id="lvl2Text">Ты в офисе. Теперь нужно согласовать заявку!</div>
+        <button id="lvl2Btn" onclick="goLevel2()">ИГРАТЬ →</button>
+      </div>
+
       <div class="btn-row">
         <button class="btn-retry" onclick="location.reload()">🔄 Ещё раз</button>
         <button class="btn-share" onclick="shareResult()">
@@ -73,6 +81,12 @@
       document.getElementById('splash').style.display = 'none';
       document.getElementById('gameWrapper').style.display = 'block';
       initGame();
+    }
+
+    function goLevel2() {
+      // Храним результат первого уровня в sessionStorage
+      sessionStorage.setItem('level1_done', '1');
+      window.location.href = '../level2/index.html';
     }
 
     function shareResult() {
