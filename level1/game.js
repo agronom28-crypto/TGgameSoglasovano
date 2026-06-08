@@ -7,12 +7,28 @@ const TOTAL_DIST = 10;
 const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
 const PLAYER_X = 80;
 
+// Размер отображаемого спрайта
+const SPRITE_W = 64;
+const SPRITE_H = 96;
+
+// Хитбокс персонажа (внутри спрайта)
 const P = {
-  left:   6,
-  right: 38,
-  fullTop: -78,
-  duckTop: -44,
+  left:    8,
+  right:  56,
+  fullTop: -SPRITE_H,
+  duckTop: -SPRITE_H * 0.55,
 };
+
+let playerImg = null;
+let imgLoaded = false;
+
+function loadAssets(cb) {
+  playerImg = new Image();
+  playerImg.onload  = () => { imgLoaded = true; cb(); };
+  playerImg.onerror = () => { imgLoaded = false; cb(); };  // fallback — рисуем запасным цветом
+  // Путь относительно от level1/
+  playerImg.src = '../Pictures/3D%20person.png';
+}
 
 let state = {};
 
@@ -118,7 +134,7 @@ function triggerBoostFlash() {
   flash = { active: true, life: 1.0 };
   for (let i = 0; i < 24; i++) {
     const angle = (i / 24) * Math.PI * 2, speed = 3 + Math.random() * 5;
-    burstParticles.push({ x: PLAYER_X + 22, y: state.y - 40, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2, r: 3 + Math.random() * 4, life: 1.0, decay: 0.025 + Math.random() * 0.02, hue: 40 + Math.random() * 30 });
+    burstParticles.push({ x: PLAYER_X + SPRITE_W / 2, y: state.y - SPRITE_H / 2, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2, r: 3 + Math.random() * 4, life: 1.0, decay: 0.025 + Math.random() * 0.02, hue: 40 + Math.random() * 30 });
   }
   shake = { x: 0, y: 0, life: 0.35 };
 }
@@ -142,10 +158,11 @@ function drawFlash() {
 // ─── ХИТБОКСЫ ────────────────────────────────────────────────────────────────────
 function playerBox() {
   const duck = state.isDucking;
+  const topOffset = duck ? P.duckTop : P.fullTop;
   return {
     x1: PLAYER_X + P.left,
     x2: PLAYER_X + P.right,
-    y1: state.y + (duck ? P.duckTop : P.fullTop),
+    y1: state.y + topOffset,
     y2: state.y,
   };
 }
@@ -157,7 +174,6 @@ function obstacleBox(o) {
   }
 }
 function boostBox(b) {
-  // Буст висит высоко — на уровне верхушки прыжка
   return { x1: b.x, x2: b.x + 32, y1: GROUND_Y - 130, y2: GROUND_Y - 90 };
 }
 function overlaps(a, b) {
@@ -184,7 +200,8 @@ function initGame() {
     lastFrame: Date.now(), animTime: 0, step: 0,
   };
   bindControls();
-  loop();
+  // Загружаем спрайт персонажа, затем стартуем цикл
+  loadAssets(() => loop());
 }
 
 // ─── УПРАВЛЕНИЕ ───────────────────────────────────────────────────────────────
@@ -204,49 +221,41 @@ function bindControls() {
   });
 }
 
-// ─── ПЕРСОНАЖ ─────────────────────────────────────────────────────────────────
-function drawCharacter(x, ground, phase, isDucking, boost) {
-  const t = phase * Math.PI * 2;
-  const color = boost ? '#FFD700' : '#1565C0';
-  const skin = '#FFCC80', suit = color, tie = boost ? '#FF6B00' : '#E53935';
-  ctx.save();
-  if (isDucking) {
-    const bx = x + 22;
-    ctx.fillStyle = suit; ctx.fillRect(x + 4, ground - 38, 36, 22);
-    ctx.beginPath(); ctx.arc(bx, ground - 44, 14, 0, Math.PI * 2); ctx.fillStyle = skin; ctx.fill();
-    ctx.fillStyle = '#1a1a2e'; ctx.fillRect(x + 6, ground - 18, 13, 18); ctx.fillRect(x + 23, ground - 18, 13, 18);
-    ctx.fillStyle = '#333'; ctx.fillRect(x + 4, ground - 2, 17, 8); ctx.fillRect(x + 21, ground - 2, 17, 8);
-    ctx.restore(); return;
+// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
+function drawCharacter(groundY, isDucking, boost) {
+  if (!imgLoaded) {
+    // Запасной рендер: простой цветной прямоугольник
+    ctx.fillStyle = boost ? '#FFD700' : '#1565C0';
+    ctx.fillRect(PLAYER_X + P.left, groundY + P.fullTop, P.right - P.left, -P.fullTop);
+    return;
   }
-  const legSwing = Math.sin(t) * 28, armSwing = Math.cos(t) * 22;
-  const bodyBob = Math.abs(Math.sin(t)) * 4, bx = x + 22, baseY = ground - bodyBob;
-  const tieSway = -Math.sin(t) * 8;
-  ctx.save(); ctx.translate(bx - 2 + tieSway, baseY - 58); ctx.rotate(tieSway * 0.06);
-  ctx.fillStyle = tie; ctx.fillRect(-3, 0, 6, 22);
-  ctx.beginPath(); ctx.moveTo(-5, 22); ctx.lineTo(5, 22); ctx.lineTo(0, 30); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  ctx.save(); ctx.translate(bx - 6, baseY - 24); ctx.rotate((legSwing * Math.PI) / 180);
-  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(-5, 0, 10, 24); ctx.translate(0, 24);
-  ctx.rotate((-legSwing * 0.6 * Math.PI) / 180); ctx.fillRect(-4, 0, 9, 20);
-  ctx.fillStyle = '#333'; ctx.fillRect(-6, 18, 16, 7); ctx.restore();
-  ctx.save(); ctx.translate(bx + 6, baseY - 24); ctx.rotate((-legSwing * Math.PI) / 180);
-  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(-5, 0, 10, 24); ctx.translate(0, 24);
-  ctx.rotate((legSwing * 0.6 * Math.PI) / 180); ctx.fillRect(-4, 0, 9, 20);
-  ctx.fillStyle = '#333'; ctx.fillRect(-6, 18, 16, 7); ctx.restore();
-  ctx.fillStyle = suit; ctx.beginPath(); ctx.roundRect(bx - 16, baseY - 62, 32, 38, 6); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.fillRect(bx - 5, baseY - 62, 10, 24);
-  ctx.save(); ctx.translate(bx - 16, baseY - 56); ctx.rotate((armSwing * Math.PI) / 180);
-  ctx.fillStyle = suit; ctx.fillRect(-5, 0, 9, 20); ctx.fillStyle = skin; ctx.fillRect(-4, 18, 8, 10); ctx.restore();
-  ctx.save(); ctx.translate(bx + 16, baseY - 56); ctx.rotate((-armSwing * Math.PI) / 180);
-  ctx.fillStyle = suit; ctx.fillRect(-4, 0, 9, 20); ctx.fillStyle = skin; ctx.fillRect(-3, 18, 8, 10); ctx.restore();
-  ctx.beginPath(); ctx.arc(bx, baseY - 72, 14, 0, Math.PI * 2); ctx.fillStyle = skin; ctx.fill();
-  ctx.beginPath(); ctx.arc(bx, baseY - 80, 14, Math.PI, 0); ctx.fillStyle = '#4E342E'; ctx.fill();
-  ctx.beginPath(); ctx.arc(bx + 5, baseY - 73, 3, 0, Math.PI * 2); ctx.fillStyle = '#1a1a2e'; ctx.fill();
-  ctx.beginPath(); ctx.arc(bx + 4, baseY - 65, 4, 0.1, Math.PI - 0.1); ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.save(); ctx.translate(bx + 18, baseY - 50); ctx.rotate(Math.sin(t) * 0.15);
-  ctx.fillStyle = '#5D4037'; ctx.fillRect(0, 0, 18, 14);
-  ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 1.5; ctx.strokeRect(0, 0, 18, 14);
-  ctx.beginPath(); ctx.arc(9, -1, 5, Math.PI, 0); ctx.stroke(); ctx.restore();
+
+  ctx.save();
+
+  // Боб при беге
+  const bob = state.isJumping ? 0 : Math.abs(Math.sin(state.step * Math.PI * 2)) * 3;
+
+  let drawW = SPRITE_W;
+  let drawH = SPRITE_H;
+  let drawX = PLAYER_X;
+  let drawY = groundY - SPRITE_H - bob;
+
+  if (isDucking) {
+    // Присед — сжимаем по вертикали, растягиваем по горизонтали
+    drawH = SPRITE_H * 0.55;
+    drawW = SPRITE_W * 1.2;
+    drawX = PLAYER_X - (drawW - SPRITE_W) / 2;
+    drawY = groundY - drawH;
+  }
+
+  // Буст-оверлей: золотой оттенок
+  if (boost) {
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur  = 24;
+  }
+
+  ctx.drawImage(playerImg, drawX, drawY, drawW, drawH);
+
   ctx.restore();
 }
 
@@ -279,16 +288,13 @@ function drawBoosts() {
     const box = boostBox(b);
     const cx = (box.x1 + box.x2) / 2;
     ctx.save();
-    // Если стоишь на земле — буст полупрозрачный, подсказка стрелкой
     ctx.globalAlpha = state.isJumping ? 1 : 0.35;
     ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18 * pulse;
     ctx.font = `${Math.round(30 * pulse)}px sans-serif`; ctx.textAlign = 'center';
     ctx.fillText('⚡', cx, box.y2);
-    // Стрелка вниз (подсказка игроку прыгнуть)
     if (!state.isJumping) {
       ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 300) * 0.3;
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#FFD700';
       ctx.fillText('↑', cx, box.y2 + 26);
     }
     ctx.textAlign = 'left';
@@ -334,7 +340,6 @@ function checkCollisions() {
     if (overlaps(pb, obstacleBox(o))) endGame('hit');
   });
   state.boosts = state.boosts.filter(b => {
-    // Подбирается ТОЛЬКО в прыжке
     if (state.isJumping && overlaps(pb, boostBox(b))) {
       state.boost = true; state.boostTimer = 5;
       triggerBoostFlash();
@@ -357,7 +362,7 @@ function draw() {
   drawBoosts();
   drawObstacles();
   drawDust();
-  drawCharacter(PLAYER_X, state.y, state.step, state.isDucking, state.boost);
+  drawCharacter(state.y, state.isDucking, state.boost);
   if (state.timeLeft > 55) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 120);
