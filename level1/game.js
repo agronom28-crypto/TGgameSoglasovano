@@ -9,7 +9,6 @@ const BASE_SPEED   = TOTAL_DIST / GAME_DURATION;
 
 const FRAME_COUNT = 6;
 
-// Реальные размеры кадра — вычисляются после загрузки
 let realFrameW = 128;
 let realFrameH = 192;
 
@@ -17,23 +16,49 @@ const SPRITE_W = 100;
 const SPRITE_H = 150;
 const ANIM_FPS = 12;
 
+// Сколько процентов снизу спрайта пустые (персонаж не занимает весь кадр)
+// 0 = ноги внизу спрайта, 0.15 = 15% пустых пикселей снизу
+const FEET_OFFSET = 0.12;
+
 const P = {
-  left:    12,
-  right:   88,
-  get fullTop() { return -SPRITE_H; },
+  left:    10,
+  right:   90,
+  get fullTop() { return -SPRITE_H * (1 - FEET_OFFSET); },
   get duckTop()  { return -Math.round(SPRITE_H * 0.55); },
 };
 
 let runImg      = null;
+let cleanFrames = null;  // offscreen canvas с удалённым белым фоном
 let fallbackImg = null;
 let imgMode     = 'none';
 
+// Удаляем белый фон (и близкие к белому) из спрайтшита
+function removeWhiteBg(img) {
+  const oc  = document.createElement('canvas');
+  oc.width  = img.naturalWidth;
+  oc.height = img.naturalHeight;
+  const ox  = oc.getContext('2d');
+  ox.drawImage(img, 0, 0);
+  const data = ox.getImageData(0, 0, oc.width, oc.height);
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i+1], b = d[i+2];
+    // Если пиксель светлый (r,g,b > 220) — делаем прозрачным
+    if (r > 220 && g > 220 && b > 220) {
+      d[i+3] = 0;
+    }
+  }
+  ox.putImageData(data, 0, 0);
+  return oc;
+}
+
 function loadAssets(cb) {
   runImg = new Image();
+  runImg.crossOrigin = 'anonymous';
   runImg.onload = () => {
-    // Вычисляем размер одного кадра из реальных размеров картинки
     realFrameW = Math.floor(runImg.naturalWidth / FRAME_COUNT);
     realFrameH = runImg.naturalHeight;
+    cleanFrames = removeWhiteBg(runImg);  // удаляем белый фон
     imgMode = 'sheet';
     cb();
   };
@@ -48,7 +73,7 @@ function loadAssets(cb) {
 
 let state = {};
 
-// ─── ПАРАЛЛАКС ────────────────────────────────────────────────────────────────────
+// ─── ПАРАЛЛАКС ──────────────────────────────────────────────────────────────────
 const PARALLAX_LAYERS = [
   { speed: 0.08, items: [] },
   { speed: 0.30, items: [] },
@@ -128,7 +153,7 @@ function drawParallax() {
   });
 }
 
-// ─── ПЫЛЬ ───────────────────────────────────────────────────────────────────────
+// ─── ПЫЛЬ ──────────────────────────────────────────────────────────────────────
 let dustParticles = [];
 function spawnDust(boost) {
   for (let i = 0; i < (boost ? 3 : 1); i++)
@@ -142,7 +167,7 @@ function drawDust() {
   dustParticles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(${p.color},${p.life * 0.7})`; ctx.fill(); });
 }
 
-// ─── БУСТ-ВСПЫШКА ───────────────────────────────────────────────────────────────
+// ─── БУСТ-ВСПЫШКА ──────────────────────────────────────────────────────────────
 let flash = { active: false, life: 0 };
 let burstParticles = [];
 let shake = { x: 0, y: 0, life: 0 };
@@ -171,7 +196,7 @@ function drawFlash() {
   });
 }
 
-// ─── ХИТБОКСЫ ───────────────────────────────────────────────────────────────────
+// ─── ХИТБОКСЫ ──────────────────────────────────────────────────────────────────
 function playerBox() {
   const duck = state.isDucking;
   return {
@@ -188,7 +213,7 @@ function obstacleBox(o) {
 function boostBox(b) { return { x1: b.x, x2: b.x + 44, y1: GROUND_Y - 170, y2: GROUND_Y - 120 }; }
 function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
-// ─── INIT ───────────────────────────────────────────────────────────────────────
+// ─── INIT ──────────────────────────────────────────────────────────────────────
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx    = canvas.getContext('2d');
@@ -215,7 +240,7 @@ function initGame() {
   loadAssets(() => loop());
 }
 
-// ─── УПРАВЛЕНИЕ ───────────────────────────────────────────────────────────────
+// ─── УПРАВЛЕНИЕ ──────────────────────────────────────────────────────────────
 let touchStartY = 0;
 function bindControls() {
   const doJump = () => { if (!state.isJumping) { state.vy = -15; state.isJumping = true; } };
@@ -232,7 +257,7 @@ function bindControls() {
   });
 }
 
-// ─── СТИК-ФИГУР ─────────────────────────────────────────────────────────────────
+// ─── СТИК-ФИГУР ────────────────────────────────────────────────────────────────
 function drawStickFigure(dX, dY, dW, dH, step, boost) {
   const cx = dX + dW / 2;
   const s  = Math.sin(step * Math.PI * 2);
@@ -251,7 +276,7 @@ function drawStickFigure(dX, dY, dW, dH, step, boost) {
   ctx.stroke();
 }
 
-// ─── РИСУЕМ ПЕРСОНАЖА ───────────────────────────────────────────────────────────
+// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
 function drawCharacter() {
   const groundY = state.y;
   const duck    = state.isDucking;
@@ -264,7 +289,8 @@ function drawCharacter() {
   let dW = SPRITE_W;
   let dH = SPRITE_H;
   let dX = PLAYER_X;
-  let dY = groundY - dH;
+  // Смещаем вверх на FEET_OFFSET — ноги внизу спрайта совпадают с groundY
+  let dY = groundY - dH * (1 - FEET_OFFSET);
 
   if (duck) {
     dH = Math.round(SPRITE_H * 0.55);
@@ -283,9 +309,9 @@ function drawCharacter() {
 
   if (imgMode === 'sheet') {
     const frameIdx = jumping ? 2 : state.frame;
-    // Используем реальные размеры кадра из naturalWidth/Height
+    // Рисуем из cleanFrames (без белого фона)
     ctx.drawImage(
-      runImg,
+      cleanFrames,
       frameIdx * realFrameW, 0, realFrameW, realFrameH,
       dX, dY, dW, dH
     );
@@ -298,7 +324,7 @@ function drawCharacter() {
   ctx.restore();
 }
 
-// ─── ОБЪЕКТЫ ───────────────────────────────────────────────────────────────────
+// ─── ОБЪЕКТЫ ──────────────────────────────────────────────────────────────────
 function spawnObstacle() {
   state.obstacles.push({ type: Math.random() > 0.5 ? 'low' : 'high', x: canvas.width + 40 });
 }
@@ -332,7 +358,7 @@ function drawBoosts() {
   });
 }
 
-// ─── UPDATE ─────────────────────────────────────────────────────────────────────
+// ─── UPDATE ────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (!state.running) return;
 
@@ -372,7 +398,7 @@ function update(dt) {
   checkCollisions();
 }
 
-// ─── КОЛЛИЗИИ ────────────────────────────────────────────────────────────────
+// ─── КОЛЛИЗИИ ──────────────────────────────────────────────────────────────
 function checkCollisions() {
   const pb = playerBox();
   state.obstacles.forEach(o => { if (overlaps(pb, obstacleBox(o))) endGame('hit'); });
@@ -384,7 +410,7 @@ function checkCollisions() {
   });
 }
 
-// ─── DRAW ──────────────────────────────────────────────────────────────────────
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(shake.x, shake.y);
@@ -409,7 +435,7 @@ function draw() {
   document.getElementById('distance').textContent = state.distance.toFixed(2);
 }
 
-// ─── РЕЗУЛЬТАТ ───────────────────────────────────────────────────────────────────
+// ─── РЕЗУЛЬТАТ ──────────────────────────────────────────────────────────────────
 function getMedal(reason, score, elapsed) {
   if (reason === 'finish') {
     if (elapsed <= 30) return { icon: '🥇', label: 'Золотая медаль — спринтер!' };
