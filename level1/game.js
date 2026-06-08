@@ -8,14 +8,13 @@ const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
 const PLAYER_X = 80;
 
 // Спрайтшит: 6 кадров горизонтально
-const FRAME_COUNT = 6;
-const FRAME_W     = 128;   // ширина одного кадра в спрайтшите
-const FRAME_H     = 192;   // высота кадра в спрайтшите
-const SPRITE_W    = 64;    // размер на экране
-const SPRITE_H    = 96;
-const ANIM_FPS    = 12;    // кадров в секунду (нормальный бег)
+const FRAME_COUNT  = 6;
+const FRAME_W      = 128;
+const FRAME_H      = 192;
+const SPRITE_W     = 64;
+const SPRITE_H     = 96;
+const ANIM_FPS     = 12;
 
-// Хитбокс
 const P = {
   left:    8,
   right:  56,
@@ -23,13 +22,21 @@ const P = {
   duckTop: -Math.round(SPRITE_H * 0.55),
 };
 
-let runImg    = null;
-let imgLoaded = false;
+let runImg      = null;   // спрайтшит 6 кадров
+let fallbackImg = null;   // одиночный спрайт
+let imgMode     = 'none'; // 'sheet' | 'single' | 'none'
 
 function loadAssets(cb) {
+  // 1. Пробуем спрайтшит
   runImg = new Image();
-  runImg.onload  = () => { imgLoaded = true;  cb(); };
-  runImg.onerror = () => { imgLoaded = false; cb(); };
+  runImg.onload = () => { imgMode = 'sheet'; cb(); };
+  runImg.onerror = () => {
+    // 2. Если нет — загружаем старый спрайт
+    fallbackImg = new Image();
+    fallbackImg.onload  = () => { imgMode = 'single'; cb(); };
+    fallbackImg.onerror = () => { imgMode = 'none';   cb(); };
+    fallbackImg.src = '../Pictures/3D%20person.png';
+  };
   runImg.src = '../Pictures/run_spritesheet.png';
 }
 
@@ -194,8 +201,8 @@ function initGame() {
     obstacles: [], boosts: [],
     lastObstacleTime: 0, lastBoostTime: 0,
     lastFrame: Date.now(),
-    animTime: 0,  // аккумулированное время
-    frame: 0,     // текущий кадр
+    animTime: 0,
+    frame: 0,
   };
   bindControls();
   loadAssets(() => loop());
@@ -219,15 +226,48 @@ function bindControls() {
 }
 
 // ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
+// Простой стик-фигур — рисуется если обе картинки не загрузились
+function drawStickFigure(dX, dY, dW, dH, step, boost) {
+  const cx = dX + dW / 2;
+  const s  = Math.sin(step * Math.PI * 2);
+  ctx.strokeStyle = boost ? '#FFD700' : '#1a237e';
+  ctx.fillStyle   = boost ? '#FFD700' : '#1565C0';
+  ctx.lineWidth   = 3;
+  ctx.lineCap     = 'round';
+  // Голова
+  ctx.beginPath();
+  ctx.arc(cx, dY + dH * 0.12, dH * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // Туловище
+  ctx.beginPath();
+  ctx.moveTo(cx, dY + dH * 0.22);
+  ctx.lineTo(cx, dY + dH * 0.6);
+  ctx.stroke();
+  // Руки
+  ctx.beginPath();
+  ctx.moveTo(cx, dY + dH * 0.3);
+  ctx.lineTo(cx - dW * 0.3, dY + dH * 0.45 + s * dH * 0.08);
+  ctx.moveTo(cx, dY + dH * 0.3);
+  ctx.lineTo(cx + dW * 0.3, dY + dH * 0.45 - s * dH * 0.08);
+  ctx.stroke();
+  // Ноги
+  ctx.beginPath();
+  ctx.moveTo(cx, dY + dH * 0.6);
+  ctx.lineTo(cx - dW * 0.2, dY + dH * 0.8 - s * dH * 0.1);
+  ctx.moveTo(cx, dY + dH * 0.6);
+  ctx.lineTo(cx + dW * 0.2, dY + dH * 0.8 + s * dH * 0.1);
+  ctx.stroke();
+}
+
 function drawCharacter() {
   const groundY = state.y;
   const duck    = state.isDucking;
   const jumping = state.isJumping;
   const boost   = state.boost;
+  const step    = state.animTime * (state.boost ? ANIM_FPS * 1.6 : ANIM_FPS) / FRAME_COUNT;
 
   ctx.save();
 
-  // Размер и позиция
   let dW = SPRITE_W;
   let dH = SPRITE_H;
   let dX = PLAYER_X;
@@ -240,7 +280,6 @@ function drawCharacter() {
     dY = groundY - dH;
   }
 
-  // Наклон вперёд при бусте
   if (boost && !duck) {
     ctx.translate(dX + dW / 2, groundY);
     ctx.rotate(-0.12);
@@ -249,14 +288,14 @@ function drawCharacter() {
 
   if (boost) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 24; }
 
-  if (imgLoaded) {
-    // В прыжке — фиксируем кадр 2 (фаза полёта)
+  if (imgMode === 'sheet') {
     const frameIdx = jumping ? 2 : state.frame;
-    const sx = frameIdx * FRAME_W;
-    ctx.drawImage(runImg, sx, 0, FRAME_W, FRAME_H, dX, dY, dW, dH);
+    ctx.drawImage(runImg, frameIdx * FRAME_W, 0, FRAME_W, FRAME_H, dX, dY, dW, dH);
+  } else if (imgMode === 'single') {
+    ctx.drawImage(fallbackImg, dX, dY, dW, dH);
   } else {
-    ctx.fillStyle = boost ? '#FFD700' : '#1565C0';
-    ctx.fillRect(dX, dY, dW, dH);
+    // Стик-фигур — видно и не белый прямоугольник
+    drawStickFigure(dX, dY, dW, dH, step, boost);
   }
 
   ctx.restore();
@@ -267,7 +306,6 @@ function spawnObstacle() {
   state.obstacles.push({ type: Math.random() > 0.5 ? 'low' : 'high', x: canvas.width + 40 });
 }
 function spawnBoost() { state.boosts.push({ x: canvas.width + 40 }); }
-
 function drawObstacles() {
   state.obstacles.forEach(o => {
     const b = obstacleBox(o);
@@ -301,14 +339,12 @@ function drawBoosts() {
 function update(dt) {
   if (!state.running) return;
 
-  // Листаем кадры по таймеру
   const fps = state.boost ? ANIM_FPS * 1.6 : ANIM_FPS;
   state.animTime += dt;
   const frameDur = 1 / fps;
   if (state.animTime >= frameDur) {
     state.animTime -= frameDur;
     state.frame = (state.frame + 1) % FRAME_COUNT;
-    // Пыль на кадрах приземления (0 и 3)
     if (!state.isJumping && (state.frame === 0 || state.frame === 3))
       spawnDust(state.boost);
   }
