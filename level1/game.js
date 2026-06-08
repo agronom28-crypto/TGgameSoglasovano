@@ -12,7 +12,6 @@ const FRAME_COUNT = 6;
 const FRAME_W     = 128;
 const FRAME_H     = 192;
 
-// Размер на экране — крупнее
 const SPRITE_W = 96;
 const SPRITE_H = 144;
 const ANIM_FPS = 12;
@@ -42,7 +41,7 @@ function loadAssets(cb) {
 
 let state = {};
 
-// ─── ПАРАЛЛАКС ──────────────────────────────────────────────────────
+// ─── ПАРАЛЛАКС ──────────────────────────────────────────────────────────────────
 const PARALLAX_LAYERS = [
   { speed: 0.08, items: [] },
   { speed: 0.30, items: [] },
@@ -122,7 +121,7 @@ function drawParallax() {
   });
 }
 
-// ─── ПЫЛЬ ─────────────────────────────────────────────────────────────────────
+// ─── ПЫЛЬ ───────────────────────────────────────────────────────────────────────
 let dustParticles = [];
 function spawnDust(boost) {
   for (let i = 0; i < (boost ? 3 : 1); i++)
@@ -136,7 +135,7 @@ function drawDust() {
   dustParticles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(${p.color},${p.life * 0.7})`; ctx.fill(); });
 }
 
-// ─── БУСТ-ВСПЫШКА ───────────────────────────────────────────────────────────
+// ─── БУСТ-ВСПЫШКА ───────────────────────────────────────────────────────────────
 let flash = { active: false, life: 0 };
 let burstParticles = [];
 let shake = { x: 0, y: 0, life: 0 };
@@ -165,7 +164,7 @@ function drawFlash() {
   });
 }
 
-// ─── ХИТБОКСЫ ────────────────────────────────────────────────────────────────────
+// ─── ХИТБОКСЫ ───────────────────────────────────────────────────────────────────
 function playerBox() {
   const duck = state.isDucking;
   return {
@@ -182,14 +181,18 @@ function obstacleBox(o) {
 function boostBox(b) { return { x1: b.x, x2: b.x + 44, y1: GROUND_Y - 170, y2: GROUND_Y - 120 }; }
 function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
-// ─── INIT ───────────────────────────────────────────────────────────────────────
+// ─── INIT ────────────────────────────────────────────────────────────────────────
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
-  GROUND_Y = Math.round(canvas.height * 0.72);
-  PLAYER_X = Math.round(canvas.width  * 0.12);  // 12% ширины
+
+  // GROUND_Y = линия земли. Персонаж стоит ногами на GROUND_Y.
+  // Ставим на 65% высоты — небо сверху, земля снизу, персонаж виден полностью.
+  GROUND_Y = Math.round(canvas.height * 0.65);
+  PLAYER_X = Math.round(canvas.width  * 0.12);
+
   dustParticles = []; burstParticles = [];
   flash = { active: false, life: 0 };
   shake = { x: 0, y: 0, life: 0 };
@@ -209,7 +212,7 @@ function initGame() {
   loadAssets(() => loop());
 }
 
-// ─── УПРАВЛЕНИЕ ───────────────────────────────────────────────────────────────
+// ─── УПРАВЛЕНИЕ ─────────────────────────────────────────────────────────────────
 let touchStartY = 0;
 function bindControls() {
   const doJump = () => { if (!state.isJumping) { state.vy = -15; state.isJumping = true; } };
@@ -226,7 +229,7 @@ function bindControls() {
   });
 }
 
-// ─── СТИК-ФИГУР ───────────────────────────────────────────────────────────────────
+// ─── СТИК-ФИГУР ─────────────────────────────────────────────────────────────────
 function drawStickFigure(dX, dY, dW, dH, step, boost) {
   const cx = dX + dW / 2;
   const s  = Math.sin(step * Math.PI * 2);
@@ -245,9 +248,9 @@ function drawStickFigure(dX, dY, dW, dH, step, boost) {
   ctx.stroke();
 }
 
-// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
+// ─── РИСУЕМ ПЕРСОНАЖА ───────────────────────────────────────────────────────────
 function drawCharacter() {
-  const groundY = state.y;          // Y земли (ноги)
+  const groundY = state.y;
   const duck    = state.isDucking;
   const jumping = state.isJumping;
   const boost   = state.boost;
@@ -255,18 +258,16 @@ function drawCharacter() {
 
   ctx.save();
 
-  // Текущий размер
   let dW = SPRITE_W;
   let dH = SPRITE_H;
   let dX = PLAYER_X;
-  // dY: верхняя грань спрайта = groundY - dH
-  let dY = groundY - dH;
+  let dY = groundY - dH;  // верхняя грань = ноги - высота
 
   if (duck) {
     dH = Math.round(SPRITE_H * 0.55);
     dW = Math.round(SPRITE_W * 1.2);
     dX = PLAYER_X - Math.round((dW - SPRITE_W) / 2);
-    dY = groundY - dH;  // ноги всегда на земле
+    dY = groundY - dH;
   }
 
   if (boost && !duck) {
@@ -280,8 +281,8 @@ function drawCharacter() {
   if (imgMode === 'sheet') {
     const frameIdx = jumping ? 2 : state.frame;
     ctx.drawImage(runImg,
-      frameIdx * FRAME_W, 0, FRAME_W, FRAME_H,  // источник
-      dX, dY, dW, dH                             // дестинация
+      frameIdx * FRAME_W, 0, FRAME_W, FRAME_H,
+      dX, dY, dW, dH
     );
   } else if (imgMode === 'single') {
     ctx.drawImage(fallbackImg, dX, dY, dW, dH);
@@ -366,7 +367,7 @@ function update(dt) {
   checkCollisions();
 }
 
-// ─── КОЛЛИЗИИ ─────────────────────────────────────────────────────────────────
+// ─── КОЛЛИЗИИ ───────────────────────────────────────────────────────────────────
 function checkCollisions() {
   const pb = playerBox();
   state.obstacles.forEach(o => { if (overlaps(pb, obstacleBox(o))) endGame('hit'); });
@@ -378,7 +379,7 @@ function checkCollisions() {
   });
 }
 
-// ─── DRAW ──────────────────────────────────────────────────────────────────────
+// ─── DRAW ────────────────────────────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(shake.x, shake.y);
@@ -403,7 +404,7 @@ function draw() {
   document.getElementById('distance').textContent = state.distance.toFixed(2);
 }
 
-// ─── РЕЗУЛЬТАТ ─────────────────────────────────────────────────────────────────────
+// ─── РЕЗУЛЬТАТ ───────────────────────────────────────────────────────────────────
 function getMedal(reason, score, elapsed) {
   if (reason === 'finish') {
     if (elapsed <= 30) return { icon: '🥇', label: 'Золотая медаль — спринтер!' };
