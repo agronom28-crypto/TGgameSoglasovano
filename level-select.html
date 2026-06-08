@@ -35,8 +35,6 @@
       font-size: 14px; cursor: pointer;
     }
     #introBack:active { opacity: 0.7; }
-
-    /* Оверлей «нажми для видео» — для autoplay из другой страницы */
     #tapOverlay {
       display: none;
       position: absolute; inset: 0; z-index: 20;
@@ -67,7 +65,6 @@
     <video id="introVid" playsinline preload="none">
       <source id="introSrc" src="" type="video/mp4">
     </video>
-    <!-- Оверлей нажатия если автоплей заблокирован -->
     <div id="tapOverlay" onclick="resumeVideo()">
       <div id="tapIcon">▶</div>
       <div id="tapLabel">Нажми чтобы начать</div>
@@ -85,21 +82,22 @@
 
   <script>
     const LEVELS = [
-      { n: 1,  title: 'Забег',         sub: '10 км до офиса',   img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
-      { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр', img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
-      { n: 3,  title: 'Совещание',     sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 4,  title: 'Согласование',  sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 5,  title: 'Командировка',  sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 6,  title: 'Аудит',         sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 7,  title: 'Презентация',   sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 8,  title: 'Дедлайн',       sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 9,  title: 'Корпоратив',    sub: 'Скоро...',          img: null, path: null, intro: null },
-      { n: 10, title: 'Финал',         sub: 'Скоро...',          img: null, path: null, intro: null },
+      { n: 1,  title: 'Забег',         sub: '10 км до офиса',     img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
+      { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр',   img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
+      { n: 3,  title: 'Деньги с неба',    sub: 'Собери 100 согласиков', img: 'Pictures/MainLevel2.png',     path: 'level3/index.html', intro: null },
+      { n: 4,  title: 'Совещание',     sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 5,  title: 'Командировка',  sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 6,  title: 'Аудит',         sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 7,  title: 'Презентация',   sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 8,  title: 'Дедлайн',       sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 9,  title: 'Корпоратив',    sub: 'Скоро...',            img: null, path: null, intro: null },
+      { n: 10, title: 'Финал',         sub: 'Скоро...',            img: null, path: null, intro: null },
     ];
 
     function isUnlocked(n) {
       if (n === 1) return true;
       if (n === 2) return !!localStorage.getItem('level1_done');
+      if (n === 3) return !!localStorage.getItem('level2_done');
       return false;
     }
 
@@ -110,8 +108,8 @@
     const skipBtn    = document.getElementById('introSkip');
     const tapOverlay = document.getElementById('tapOverlay');
 
-    skipBtn.onclick     = () => goToLevel();
-    introVid.onended    = () => goToLevel();
+    skipBtn.onclick  = () => goToLevel();
+    introVid.onended = () => goToLevel();
 
     function playIntro(src, path) {
       pendingPath = path;
@@ -121,12 +119,8 @@
       introVid.currentTime = 0;
       const p = introVid.play();
       if (p !== undefined) {
-        p.then(() => {
-          tapOverlay.style.display = 'none';
-        }).catch(() => {
-          // Автоплей заблокирован — показать оверлей нажатия
-          tapOverlay.style.display = 'flex';
-        });
+        p.then(() => { tapOverlay.style.display = 'none'; })
+         .catch(() => { tapOverlay.style.display = 'flex'; });
       }
     }
 
@@ -195,13 +189,13 @@
 
     buildGrid();
 
-    // Автозапуск видео если перешли с ?autoplay=N
     const autoplayN = parseInt(new URLSearchParams(location.search).get('autoplay'));
     if (autoplayN) {
       const lvl = LEVELS.find(l => l.n === autoplayN);
       if (lvl && lvl.intro && lvl.path) {
-        // Небольшая задержка чтобы DOM успел отрисоваться
         setTimeout(() => playIntro(lvl.intro, lvl.path), 100);
+      } else if (lvl && lvl.path) {
+        setTimeout(() => { window.location.href = lvl.path; }, 100);
       }
     }
   </script>
