@@ -15,7 +15,15 @@
   <div id="splash">
     <img src="../Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
     <button id="backBtn" onclick="history.back()">← Уровни</button>
-    <button id="playBtn" onclick="startGame()">▶ PLAY</button>
+    <button id="playBtn" onclick="startIntro()">▶ PLAY</button>
+  </div>
+
+  <!-- ИНТРО-РОЛИК -->
+  <div id="introScreen">
+    <video id="introVideo" playsinline preload="auto">
+      <source src="../Pictures/main_level1_video.mp4" type="video/mp4">
+    </video>
+    <button id="introSkipBtn" onclick="startGame()">Пропустить ▶▶</button>
   </div>
 
   <!-- ИГРА -->
@@ -77,8 +85,20 @@
   </div>
 
   <script>
-    function startGame() {
+    function startIntro() {
       document.getElementById('splash').style.display = 'none';
+      const introScreen = document.getElementById('introScreen');
+      introScreen.style.display = 'flex';
+      const video = document.getElementById('introVideo');
+      video.currentTime = 0;
+      const p = video.play();
+      if (p !== undefined) p.catch(() => startGame());
+      video.onended = () => startGame();
+    }
+
+    function startGame() {
+      document.getElementById('introScreen').style.display = 'none';
+      document.getElementById('introVideo').pause();
       document.getElementById('gameWrapper').style.display = 'block';
       initGame();
     }
@@ -107,19 +127,34 @@
 
   <style>
     #backBtn {
-      position: absolute;
-      top: 18px;
-      left: 18px;
-      z-index: 2;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
+      position: absolute; top: 18px; left: 18px; z-index: 2;
+      background: rgba(0,0,0,0.5); color: #fff;
       border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
+      border-radius: 20px; padding: 8px 16px;
+      font-size: 14px; cursor: pointer;
     }
     #backBtn:active { opacity: 0.7; }
+
+    /* ИНТРО-ЭКРАН */
+    #introScreen {
+      display: none;
+      position: fixed; inset: 0; z-index: 150;
+      background: #000;
+      align-items: center; justify-content: center;
+    }
+    #introVideo {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    #introSkipBtn {
+      position: absolute; top: 18px; right: 18px; z-index: 10;
+      background: rgba(0,0,0,0.55); color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 8px 18px;
+      font-size: 15px; cursor: pointer;
+    }
+    #introSkipBtn:active { opacity: 0.7; }
   </style>
 </body>
 </html>
