@@ -48,7 +48,7 @@
     </div>
   </div>
 
-  <!-- ЭКРАН РЕЗУЛЬТАТА (проигрыш / таймаут) -->
+  <!-- ЭКРАН РЕЗУЛЬТАТА -->
   <div id="result">
     <div id="resultCard">
       <div id="resultEmoji">💥</div>
@@ -66,14 +66,14 @@
     </div>
   </div>
 
-  <!-- game.js без defer — чтобы initGame() был доступен сразу -->
   <script src="game.js"></script>
   <script>
     initGame();
 
     function goLevel2() {
       localStorage.setItem('level1_done', '1');
-      window.location.href = '../level2/index.html';
+      // Переходим на level-select с параметром — там запустится видео уровня 2
+      window.location.href = '../level-select.html?autoplay=2';
     }
 
     function shareResult() {
@@ -81,7 +81,7 @@
                  || document.getElementById('statScore').textContent;
       const time  = document.getElementById('frTime')?.textContent
                  || document.getElementById('statTime').textContent;
-      const text  = `🏃 Сбежал в GreenBank! Пройдено: ${score} за ${time}. Сможешь быстрее? → @GreenBankBot`;
+      const text = `🏃 Сбежал в GreenBank! Пройдено: ${score} за ${time}. Сможешь быстрее? → @GreenBankBot`;
       if (window.Telegram?.WebApp?.switchInlineQuery) {
         Telegram.WebApp.switchInlineQuery(text, ['users', 'groups']);
       } else if (navigator.share) {

@@ -35,6 +35,30 @@
       font-size: 14px; cursor: pointer;
     }
     #introBack:active { opacity: 0.7; }
+
+    /* Оверлей «нажми для видео» — для autoplay из другой страницы */
+    #tapOverlay {
+      display: none;
+      position: absolute; inset: 0; z-index: 20;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      gap: 14px;
+    }
+    #tapIcon {
+      width: 80px; height: 80px;
+      background: rgba(255,140,0,0.9);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; color: #fff;
+      box-shadow: 0 0 32px rgba(255,140,0,0.7);
+      animation: tapPulse 1.4s ease-in-out infinite;
+    }
+    #tapLabel { color: #fff; font-size: 18px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+    @keyframes tapPulse {
+      0%,100% { transform: scale(1);    box-shadow: 0 0 24px rgba(255,140,0,0.6); }
+      50%      { transform: scale(1.1); box-shadow: 0 0 44px rgba(255,140,0,0.9); }
+    }
   </style>
 </head>
 <body>
@@ -43,6 +67,11 @@
     <video id="introVid" playsinline preload="none">
       <source id="introSrc" src="" type="video/mp4">
     </video>
+    <!-- Оверлей нажатия если автоплей заблокирован -->
+    <div id="tapOverlay" onclick="resumeVideo()">
+      <div id="tapIcon">▶</div>
+      <div id="tapLabel">Нажми чтобы начать</div>
+    </div>
     <button id="introSkip">Пропустить ▶▶</button>
     <button id="introBack" onclick="closeIntro()">← Уровни</button>
   </div>
@@ -75,13 +104,14 @@
     }
 
     let pendingPath = null;
-    const overlay  = document.getElementById('introOverlay');
-    const introVid = document.getElementById('introVid');
-    const introSrc = document.getElementById('introSrc');
-    const skipBtn  = document.getElementById('introSkip');
+    const overlay    = document.getElementById('introOverlay');
+    const introVid   = document.getElementById('introVid');
+    const introSrc   = document.getElementById('introSrc');
+    const skipBtn    = document.getElementById('introSkip');
+    const tapOverlay = document.getElementById('tapOverlay');
 
-    skipBtn.onclick = () => goToLevel();
-    introVid.onended = () => goToLevel();
+    skipBtn.onclick     = () => goToLevel();
+    introVid.onended    = () => goToLevel();
 
     function playIntro(src, path) {
       pendingPath = path;
@@ -89,17 +119,32 @@
       introVid.load();
       overlay.classList.add('show');
       introVid.currentTime = 0;
-      introVid.play();
+      const p = introVid.play();
+      if (p !== undefined) {
+        p.then(() => {
+          tapOverlay.style.display = 'none';
+        }).catch(() => {
+          // Автоплей заблокирован — показать оверлей нажатия
+          tapOverlay.style.display = 'flex';
+        });
+      }
+    }
+
+    function resumeVideo() {
+      tapOverlay.style.display = 'none';
+      introVid.play().catch(() => goToLevel());
     }
 
     function goToLevel() {
       introVid.pause();
+      overlay.classList.remove('show');
       if (pendingPath) window.location.href = pendingPath;
     }
 
     function closeIntro() {
       introVid.pause();
       overlay.classList.remove('show');
+      tapOverlay.style.display = 'none';
       pendingPath = null;
     }
 
@@ -149,6 +194,16 @@
     }
 
     buildGrid();
+
+    // Автозапуск видео если перешли с ?autoplay=N
+    const autoplayN = parseInt(new URLSearchParams(location.search).get('autoplay'));
+    if (autoplayN) {
+      const lvl = LEVELS.find(l => l.n === autoplayN);
+      if (lvl && lvl.intro && lvl.path) {
+        // Небольшая задержка чтобы DOM успел отрисоваться
+        setTimeout(() => playIntro(lvl.intro, lvl.path), 100);
+      }
+    }
   </script>
 </body>
 </html>
