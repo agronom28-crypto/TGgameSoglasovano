@@ -1,37 +1,35 @@
 let canvas, ctx;
 let GROUND_Y;
+let PLAYER_X;  // устанавливается в initGame — 20% ширины экрана
 
 const GRAVITY = 0.6;
 const GAME_DURATION = 60;
 const TOTAL_DIST = 10;
 const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
-const PLAYER_X = 80;
 
 // Спрайтшит: 6 кадров горизонтально
 const FRAME_COUNT  = 6;
 const FRAME_W      = 128;
 const FRAME_H      = 192;
-const SPRITE_W     = 64;
-const SPRITE_H     = 96;
+const SPRITE_W     = 80;   // размер на экране (чуть крупнее)
+const SPRITE_H     = 120;
 const ANIM_FPS     = 12;
 
 const P = {
-  left:    8,
-  right:  56,
-  fullTop: -SPRITE_H,
-  duckTop: -Math.round(SPRITE_H * 0.55),
+  left:    10,
+  right:   70,
+  get fullTop() { return -SPRITE_H; },
+  get duckTop()  { return -Math.round(SPRITE_H * 0.55); },
 };
 
-let runImg      = null;   // спрайтшит 6 кадров
-let fallbackImg = null;   // одиночный спрайт
+let runImg      = null;
+let fallbackImg = null;
 let imgMode     = 'none'; // 'sheet' | 'single' | 'none'
 
 function loadAssets(cb) {
-  // 1. Пробуем спрайтшит
   runImg = new Image();
   runImg.onload = () => { imgMode = 'sheet'; cb(); };
   runImg.onerror = () => {
-    // 2. Если нет — загружаем старый спрайт
     fallbackImg = new Image();
     fallbackImg.onload  = () => { imgMode = 'single'; cb(); };
     fallbackImg.onerror = () => { imgMode = 'none';   cb(); };
@@ -176,10 +174,10 @@ function playerBox() {
   };
 }
 function obstacleBox(o) {
-  if (o.type === 'low') return { x1: o.x + 4, x2: o.x + 38, y1: GROUND_Y - 46, y2: GROUND_Y - 4 };
-  return { x1: o.x + 4, x2: o.x + 36, y1: GROUND_Y - 110, y2: GROUND_Y - 62 };
+  if (o.type === 'low') return { x1: o.x + 4, x2: o.x + 46, y1: GROUND_Y - 56, y2: GROUND_Y - 4 };
+  return { x1: o.x + 4, x2: o.x + 44, y1: GROUND_Y - 130, y2: GROUND_Y - 75 };
 }
-function boostBox(b) { return { x1: b.x, x2: b.x + 32, y1: GROUND_Y - 130, y2: GROUND_Y - 90 }; }
+function boostBox(b) { return { x1: b.x, x2: b.x + 40, y1: GROUND_Y - 160, y2: GROUND_Y - 110 }; }
 function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
 // ─── INIT ───────────────────────────────────────────────────────────────────────
@@ -188,7 +186,8 @@ function initGame() {
   ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
-  GROUND_Y = canvas.height * 0.75;
+  GROUND_Y  = Math.round(canvas.height * 0.72);  // линия земли — 72% высоты
+  PLAYER_X  = Math.round(canvas.width  * 0.15);  // персонаж — 15% ширины (левая треть)
   dustParticles = []; burstParticles = [];
   flash = { active: false, life: 0 };
   shake = { x: 0, y: 0, life: 0 };
@@ -225,46 +224,32 @@ function bindControls() {
   });
 }
 
-// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
-// Простой стик-фигур — рисуется если обе картинки не загрузились
+// ─── СТИК-ФИГУР (fallback) ────────────────────────────────────────────────────
 function drawStickFigure(dX, dY, dW, dH, step, boost) {
   const cx = dX + dW / 2;
   const s  = Math.sin(step * Math.PI * 2);
   ctx.strokeStyle = boost ? '#FFD700' : '#1a237e';
   ctx.fillStyle   = boost ? '#FFD700' : '#1565C0';
-  ctx.lineWidth   = 3;
-  ctx.lineCap     = 'round';
-  // Голова
+  ctx.lineWidth   = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx, dY + dH * 0.12, dH * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx, dY + dH * 0.22); ctx.lineTo(cx, dY + dH * 0.6); ctx.stroke();
   ctx.beginPath();
-  ctx.arc(cx, dY + dH * 0.12, dH * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-  // Туловище
-  ctx.beginPath();
-  ctx.moveTo(cx, dY + dH * 0.22);
-  ctx.lineTo(cx, dY + dH * 0.6);
+  ctx.moveTo(cx, dY + dH * 0.3); ctx.lineTo(cx - dW * 0.3, dY + dH * 0.45 + s * dH * 0.08);
+  ctx.moveTo(cx, dY + dH * 0.3); ctx.lineTo(cx + dW * 0.3, dY + dH * 0.45 - s * dH * 0.08);
   ctx.stroke();
-  // Руки
   ctx.beginPath();
-  ctx.moveTo(cx, dY + dH * 0.3);
-  ctx.lineTo(cx - dW * 0.3, dY + dH * 0.45 + s * dH * 0.08);
-  ctx.moveTo(cx, dY + dH * 0.3);
-  ctx.lineTo(cx + dW * 0.3, dY + dH * 0.45 - s * dH * 0.08);
-  ctx.stroke();
-  // Ноги
-  ctx.beginPath();
-  ctx.moveTo(cx, dY + dH * 0.6);
-  ctx.lineTo(cx - dW * 0.2, dY + dH * 0.8 - s * dH * 0.1);
-  ctx.moveTo(cx, dY + dH * 0.6);
-  ctx.lineTo(cx + dW * 0.2, dY + dH * 0.8 + s * dH * 0.1);
+  ctx.moveTo(cx, dY + dH * 0.6); ctx.lineTo(cx - dW * 0.2, dY + dH * 0.85 - s * dH * 0.1);
+  ctx.moveTo(cx, dY + dH * 0.6); ctx.lineTo(cx + dW * 0.2, dY + dH * 0.85 + s * dH * 0.1);
   ctx.stroke();
 }
 
+// ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
 function drawCharacter() {
   const groundY = state.y;
   const duck    = state.isDucking;
   const jumping = state.isJumping;
   const boost   = state.boost;
-  const step    = state.animTime * (state.boost ? ANIM_FPS * 1.6 : ANIM_FPS) / FRAME_COUNT;
+  const step    = state.animTime * (boost ? ANIM_FPS * 1.6 : ANIM_FPS) / FRAME_COUNT;
 
   ctx.save();
 
@@ -294,7 +279,6 @@ function drawCharacter() {
   } else if (imgMode === 'single') {
     ctx.drawImage(fallbackImg, dX, dY, dW, dH);
   } else {
-    // Стик-фигур — видно и не белый прямоугольник
     drawStickFigure(dX, dY, dW, dH, step, boost);
   }
 
@@ -310,9 +294,9 @@ function drawObstacles() {
   state.obstacles.forEach(o => {
     const b = obstacleBox(o);
     if (o.type === 'low') {
-      ctx.font = '40px sans-serif'; ctx.fillText('🐕', b.x1 - 2, b.y2 + 2);
+      ctx.font = '44px sans-serif'; ctx.fillText('🐕', b.x1 - 2, b.y2 + 2);
     } else {
-      ctx.font = '38px sans-serif'; ctx.textAlign = 'center';
+      ctx.font = '42px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('🎈', (b.x1 + b.x2) / 2, b.y2 + 4); ctx.textAlign = 'left';
     }
   });
@@ -324,12 +308,12 @@ function drawBoosts() {
     ctx.save();
     ctx.globalAlpha = state.isJumping ? 1 : 0.35;
     ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18 * pulse;
-    ctx.font = `${Math.round(30 * pulse)}px sans-serif`; ctx.textAlign = 'center';
+    ctx.font = `${Math.round(34 * pulse)}px sans-serif`; ctx.textAlign = 'center';
     ctx.fillText('⚡', cx, box.y2);
     if (!state.isJumping) {
       ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 300) * 0.3;
       ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#FFD700';
-      ctx.fillText('↑', cx, box.y2 + 26);
+      ctx.fillText('↑', cx, box.y2 + 28);
     }
     ctx.textAlign = 'left'; ctx.restore();
   });
@@ -403,7 +387,7 @@ function draw() {
   drawCharacter();
   if (state.timeLeft > 55) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 120);
+    ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 140);
     ctx.textAlign = 'left';
   }
   ctx.restore();
