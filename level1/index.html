@@ -10,24 +10,8 @@
 </head>
 <body>
 
-  <!-- ИНТРО-РОЛИК -->
-  <div id="introScreen">
-    <video id="introVideo" playsinline preload="auto" muted>
-      <source src="../Pictures/main_level1_video.mp4" type="video/mp4">
-    </video>
-
-    <!-- Оверлей «нажми чтобы начать» — виден пока видео не запущено -->
-    <div id="introTap" onclick="playIntro()">
-      <div id="introTapIcon">▶</div>
-      <div id="introTapLabel">Нажми чтобы начать</div>
-    </div>
-
-    <button id="introSkipBtn" onclick="startGame()">Пропустить ▶▶</button>
-    <button id="backBtn" onclick="history.back()">← Уровни</button>
-  </div>
-
   <!-- ИГРА -->
-  <div id="gameWrapper" style="display:none">
+  <div id="gameWrapper">
     <canvas id="gameCanvas"></canvas>
     <div id="ui">
       <span id="timer">60</span>с &nbsp;
@@ -84,36 +68,9 @@
   </div>
 
   <script>
-    const introVideo = document.getElementById('introVideo');
-    const introTap   = document.getElementById('introTap');
-
-    // Попытка автоплей (muted — разрешён в большинстве браузеров)
     window.addEventListener('load', () => {
-      introVideo.play()
-        .then(() => {
-          // Автоплей сработал — спрячем оверлей
-          introTap.style.display = 'none';
-        })
-        .catch(() => {
-          // Блокировка — показываем оверлей «нажми»
-          introTap.style.display = 'flex';
-        });
-      introVideo.onended = () => startGame();
-    });
-
-    function playIntro() {
-      introTap.style.display = 'none';
-      introVideo.muted = false; // включаем звук после жеста
-      introVideo.currentTime = 0;
-      introVideo.play().catch(() => startGame());
-    }
-
-    function startGame() {
-      document.getElementById('introScreen').style.display = 'none';
-      introVideo.pause();
-      document.getElementById('gameWrapper').style.display = 'block';
       if (typeof initGame === 'function') initGame();
-    }
+    });
 
     function goLevel2() {
       localStorage.setItem('level1_done', '1');
@@ -136,63 +93,5 @@
       }
     }
   </script>
-
-  <style>
-    #introScreen {
-      position: fixed; inset: 0; z-index: 150;
-      background: #000;
-      display: flex;
-      align-items: center; justify-content: center;
-    }
-    #introVideo {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
-    }
-    /* Оверлей «нажми» */
-    #introTap {
-      display: none; /* показывается только если autoplay заблокирован */
-      position: absolute; inset: 0; z-index: 11;
-      flex-direction: column;
-      align-items: center; justify-content: center;
-      cursor: pointer;
-      background: rgba(0,0,0,0.45);
-      gap: 16px;
-    }
-    #introTapIcon {
-      width: 80px; height: 80px;
-      background: rgba(255,140,0,0.9);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 34px; color: #fff;
-      box-shadow: 0 0 32px rgba(255,140,0,0.7);
-      animation: tapPulse 1.4s ease-in-out infinite;
-    }
-    #introTapLabel {
-      color: #fff; font-size: 18px; font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-      letter-spacing: 1px;
-    }
-    @keyframes tapPulse {
-      0%, 100% { transform: scale(1);    box-shadow: 0 0 24px rgba(255,140,0,0.6); }
-      50%       { transform: scale(1.1); box-shadow: 0 0 44px rgba(255,140,0,0.9); }
-    }
-    #introSkipBtn {
-      position: absolute; top: 18px; right: 18px; z-index: 12;
-      background: rgba(0,0,0,0.55); color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px; padding: 8px 18px;
-      font-size: 15px; cursor: pointer;
-    }
-    #introSkipBtn:active { opacity: 0.7; }
-    #backBtn {
-      position: absolute; top: 18px; left: 18px; z-index: 12;
-      background: rgba(0,0,0,0.5); color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px; padding: 8px 16px;
-      font-size: 14px; cursor: pointer;
-    }
-    #backBtn:active { opacity: 0.7; }
-  </style>
 </body>
 </html>
