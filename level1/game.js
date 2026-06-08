@@ -10,6 +10,45 @@ const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
 
 let state = {};
 
+// ─── ЧАСТИЦЫ ПЫЛИ ────────────────────────────────────────
+let dustParticles = [];
+
+function spawnDust(x, groundY, boost) {
+  const count = boost ? 3 : 1;
+  for (let i = 0; i < count; i++) {
+    dustParticles.push({
+      x: x + 10 + Math.random() * 24,
+      y: groundY - 2,
+      vx: -(1.5 + Math.random() * 2.5),
+      vy: -(0.5 + Math.random() * 1.5),
+      r: boost ? (4 + Math.random() * 5) : (2 + Math.random() * 4),
+      life: 1.0,
+      decay: 0.04 + Math.random() * 0.04,
+      color: boost ? '255,200,50' : '180,150,100',
+    });
+  }
+}
+
+function updateDust(dt) {
+  dustParticles.forEach(p => {
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.vy += 0.08;           // лёгкая гравитация
+    p.r  *= 0.97;           // уменьшение
+    p.life -= p.decay;
+  });
+  dustParticles = dustParticles.filter(p => p.life > 0 && p.r > 0.3);
+}
+
+function drawDust() {
+  dustParticles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${p.color},${p.life * 0.7})`;
+    ctx.fill();
+  });
+}
+
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx = canvas.getContext('2d');
@@ -17,6 +56,7 @@ function initGame() {
   canvas.height = window.innerHeight;
   LANE_WIDTH = canvas.width / LANES;
   GROUND_Y = canvas.height * 0.75;
+  dustParticles = [];
 
   state = {
     lane: 1, x: 0, y: GROUND_Y,
@@ -26,8 +66,9 @@ function initGame() {
     obstacles: [], boosts: [],
     lastObstacleTime: 0, lastBoostTime: 0,
     lastFrame: Date.now(),
-    animTime: 0,   // счётчик времени анимации
-    step: 0,       // фаза шага 0..1
+    animTime: 0,
+    step: 0,
+    lastStepPhase: 0,   // для отслеживания момента касания ногой земли
   };
 
   bindControls();
@@ -56,11 +97,10 @@ function bindControls() {
   });
 }
 
-// ─── РИСОВАНИЕ ПЕРСОНАЖА ГЕОМЕТРИЕЙ ─────────────────────
+// ─── ПЕРСОНАЖ ────────────────────────────────────────────
 function drawCharacter(x, ground, phase, isDucking, boost) {
-  // phase 0..1 — фаза цикла бега
   const t = phase * Math.PI * 2;
-  const color = boost ? '#FFD700' : '#1565C0';   // синий / золотой при бусте
+  const color = boost ? '#FFD700' : '#1565C0';
   const skin  = '#FFCC80';
   const suit  = color;
   const tie   = boost ? '#FF6B00' : '#E53935';
@@ -68,20 +108,15 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
   ctx.save();
 
   if (isDucking) {
-    // ── НЫРОК ── приседание
-    const bx = x + 22, by = ground - 28;
-    // тело
+    const bx = x + 22;
     ctx.fillStyle = suit;
     ctx.fillRect(x + 4, ground - 38, 36, 22);
-    // голова
     ctx.beginPath();
     ctx.arc(bx, ground - 44, 14, 0, Math.PI * 2);
     ctx.fillStyle = skin; ctx.fill();
-    // ноги
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(x + 6,  ground - 18, 13, 18);
     ctx.fillRect(x + 23, ground - 18, 13, 18);
-    // туфли
     ctx.fillStyle = '#333';
     ctx.fillRect(x + 4,  ground - 2, 17, 8);
     ctx.fillRect(x + 21, ground - 2, 17, 8);
@@ -89,16 +124,14 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
     return;
   }
 
-  // ── БЕГ ── анимированные конечности
-  const legSwing  = Math.sin(t) * 28;       // размах ног
-  const armSwing  = Math.cos(t) * 22;       // размах рук (в противофазе)
-  const bodyBob   = Math.abs(Math.sin(t)) * 4; // лёгкое подпрыгивание тела
-
-  const bx = x + 22;                        // центр X
-  const baseY = ground - bodyBob;           // нижняя точка тела
-
-  // --- ГАЛСТУК болтается сзади (смещение в сторону, обратную движению) ---
+  const legSwing = Math.sin(t) * 28;
+  const armSwing = Math.cos(t) * 22;
+  const bodyBob  = Math.abs(Math.sin(t)) * 4;
+  const bx   = x + 22;
+  const baseY = ground - bodyBob;
   const tieSway = -Math.sin(t) * 8;
+
+  // галстук
   ctx.save();
   ctx.translate(bx - 2 + tieSway, baseY - 58);
   ctx.rotate(tieSway * 0.06);
@@ -109,21 +142,20 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
   ctx.closePath(); ctx.fill();
   ctx.restore();
 
-  // --- НОГИ (бёдра + голени) ---
-  // Нога 1
+  // нога 1
   ctx.save();
   ctx.translate(bx - 6, baseY - 24);
   ctx.rotate((legSwing * Math.PI) / 180);
   ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(-5, 0, 10, 24);   // бедро
+  ctx.fillRect(-5, 0, 10, 24);
   ctx.translate(0, 24);
   ctx.rotate((-legSwing * 0.6 * Math.PI) / 180);
-  ctx.fillRect(-4, 0, 9, 20);    // голень
+  ctx.fillRect(-4, 0, 9, 20);
   ctx.fillStyle = '#333';
-  ctx.fillRect(-6, 18, 16, 7);   // туфля
+  ctx.fillRect(-6, 18, 16, 7);
   ctx.restore();
 
-  // Нога 2 (в противофазе)
+  // нога 2
   ctx.save();
   ctx.translate(bx + 6, baseY - 24);
   ctx.rotate((-legSwing * Math.PI) / 180);
@@ -136,58 +168,44 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
   ctx.fillRect(-6, 18, 16, 7);
   ctx.restore();
 
-  // --- ТЕЛО (пиджак / рубашка) ---
+  // тело
   ctx.fillStyle = suit;
   ctx.beginPath();
   ctx.roundRect(bx - 16, baseY - 62, 32, 38, 6);
   ctx.fill();
-
-  // Рубашка-вставка
   ctx.fillStyle = '#fff';
   ctx.fillRect(bx - 5, baseY - 62, 10, 24);
 
-  // --- РУКИ ---
-  // Рука 1
+  // руки
   ctx.save();
   ctx.translate(bx - 16, baseY - 56);
   ctx.rotate((armSwing * Math.PI) / 180);
-  ctx.fillStyle = suit;
-  ctx.fillRect(-5, 0, 9, 20);
-  ctx.fillStyle = skin;
-  ctx.fillRect(-4, 18, 8, 10);
+  ctx.fillStyle = suit; ctx.fillRect(-5, 0, 9, 20);
+  ctx.fillStyle = skin; ctx.fillRect(-4, 18, 8, 10);
   ctx.restore();
 
-  // Рука 2 (в противофазе)
   ctx.save();
   ctx.translate(bx + 16, baseY - 56);
   ctx.rotate((-armSwing * Math.PI) / 180);
-  ctx.fillStyle = suit;
-  ctx.fillRect(-4, 0, 9, 20);
-  ctx.fillStyle = skin;
-  ctx.fillRect(-3, 18, 8, 10);
+  ctx.fillStyle = suit; ctx.fillRect(-4, 0, 9, 20);
+  ctx.fillStyle = skin; ctx.fillRect(-3, 18, 8, 10);
   ctx.restore();
 
-  // --- ГОЛОВА ---
+  // голова
   ctx.beginPath();
   ctx.arc(bx, baseY - 72, 14, 0, Math.PI * 2);
   ctx.fillStyle = skin; ctx.fill();
-
-  // Волосы
   ctx.beginPath();
   ctx.arc(bx, baseY - 80, 14, Math.PI, 0);
   ctx.fillStyle = '#4E342E'; ctx.fill();
-
-  // Глаз
   ctx.beginPath();
   ctx.arc(bx + 5, baseY - 73, 3, 0, Math.PI * 2);
   ctx.fillStyle = '#1a1a2e'; ctx.fill();
-
-  // Рот
   ctx.beginPath();
   ctx.arc(bx + 4, baseY - 65, 4, 0.1, Math.PI - 0.1);
   ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5; ctx.stroke();
 
-  // --- ПОРТФЕЛЬ (покачивается) ---
+  // портфель
   ctx.save();
   ctx.translate(bx + 18, baseY - 50);
   ctx.rotate(Math.sin(t) * 0.15);
@@ -195,7 +213,6 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
   ctx.fillRect(0, 0, 18, 14);
   ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 1.5;
   ctx.strokeRect(0, 0, 18, 14);
-  // ручка портфеля
   ctx.beginPath();
   ctx.arc(9, -1, 5, Math.PI, 0);
   ctx.stroke();
@@ -204,7 +221,6 @@ function drawCharacter(x, ground, phase, isDucking, boost) {
   ctx.restore();
 }
 
-// ─── СПАВН ───────────────────────────────────────────────
 function spawnObstacle() {
   const types = ['dog', 'pit', 'ball'];
   const type = types[Math.floor(Math.random() * types.length)];
@@ -221,14 +237,24 @@ function spawnBoostStrip() {
   state.boosts.push({ x: canvas.width + 60, lane: Math.floor(Math.random() * 3) });
 }
 
-// ─── UPDATE ──────────────────────────────────────────────
 function update(dt) {
   if (!state.running) return;
 
-  // Анимация шага
-  const runSpeed = state.boost ? 8 : 5;  // циклов в сек
+  const runSpeed = state.boost ? 8 : 5;
+  const prevStep = state.step;
   state.animTime += dt * runSpeed;
   state.step = state.animTime % 1;
+
+  // спавн пыли в момент касания ногой земли (фаза ~0 и ~0.5)
+  if (!state.isJumping && !state.isDucking) {
+    const crossed = (phase, prev, cur) =>
+      (prev < phase && cur >= phase) || (prev > cur && (cur >= phase || prev < phase));
+    if (crossed(0.0, prevStep, state.step) || crossed(0.5, prevStep, state.step)) {
+      spawnDust(state.x, state.y, state.boost);
+    }
+  }
+
+  updateDust(dt);
 
   state.timeLeft -= dt;
   if (state.timeLeft <= 0) { endGame('timeout'); return; }
@@ -258,7 +284,6 @@ function update(dt) {
   checkCollisions();
 }
 
-// ─── КОЛЛИЗИИ ────────────────────────────────────────────
 function checkCollisions() {
   const px = state.x, py = state.y;
   const ph = state.isDucking ? PLAYER_H * 0.5 : PLAYER_H;
@@ -276,19 +301,15 @@ function checkCollisions() {
   });
 }
 
-// ─── DRAW ─────────────────────────────────────────────────
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Фон
   ctx.fillStyle = '#2d5a27';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Дорожка
   ctx.fillStyle = '#8B7355';
   ctx.fillRect(0, GROUND_Y - 10, canvas.width, 120);
 
-  // Полосы
   for (let i = 1; i < LANES; i++) {
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.setLineDash([20, 15]);
@@ -299,7 +320,6 @@ function draw() {
     ctx.setLineDash([]);
   }
 
-  // Ускорители
   state.boosts.forEach(b => {
     ctx.fillStyle = '#FFF176';
     ctx.fillRect(b.x, GROUND_Y - 10, 60, 120);
@@ -308,7 +328,6 @@ function draw() {
     ctx.fillText('⚡', b.x + 15, GROUND_Y + 50);
   });
 
-  // Препятствия
   state.obstacles.forEach(o => {
     if (o.type === 'dog') {
       o.lanes.forEach(l => {
@@ -330,15 +349,15 @@ function draw() {
     }
   });
 
-  // Персонаж
+  // пыль рисуется ДО персонажа (под ногами)
+  drawDust();
+
   drawCharacter(state.x, state.y, state.step, state.isDucking, state.boost);
 
-  // UI
   document.getElementById('timer').textContent = Math.ceil(state.timeLeft);
   document.getElementById('distance').textContent = state.distance.toFixed(2);
 }
 
-// ─── END ─────────────────────────────────────────────────
 function endGame(reason) {
   state.running = false;
   const el = document.getElementById('result');
@@ -355,7 +374,6 @@ function endGame(reason) {
   }
 }
 
-// ─── LOOP ─────────────────────────────────────────────────
 function loop() {
   const now = Date.now();
   const dt = Math.min((now - state.lastFrame) / 1000, 0.05);
