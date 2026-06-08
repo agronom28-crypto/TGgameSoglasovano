@@ -14,6 +14,7 @@
   <!-- ЗАСТАВКА -->
   <div id="splash">
     <img src="../Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
+    <button id="backBtn" onclick="history.back()">← Уровни</button>
     <button id="playBtn" onclick="startGame()">▶ PLAY</button>
   </div>
 
@@ -44,7 +45,7 @@
       <!-- БАННЕР ПЕРЕХОДА НА УРОВЕНЬ 2 -->
       <div id="level2Banner">
         <div id="lvl2Badge">УРОВЕНЬ 2</div>
-        <div id="lvl2Text">Ты в офисе. Впереді — собеседование!</div>
+        <div id="lvl2Text">Ты в офисе. Впереди — собеседование!</div>
         <button id="lvl2Btn" onclick="goLevel2()">ИГРАТЬ →</button>
       </div>
 
@@ -83,7 +84,7 @@
     }
 
     function goLevel2() {
-      sessionStorage.setItem('level1_done', '1');
+      localStorage.setItem('level1_done', '1');
       window.location.href = '../level2/index.html';
     }
 
@@ -103,5 +104,22 @@
       }
     }
   </script>
+
+  <style>
+    #backBtn {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 2;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #backBtn:active { opacity: 0.7; }
+  </style>
 </body>
 </html>

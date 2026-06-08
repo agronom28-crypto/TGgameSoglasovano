@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Выбор уровня — Согласовано?</title>
+  <link rel="stylesheet" href="level-select.css">
+  <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+  <div id="header">
+    <div id="headerTitle">ВЫБЕРИ УРОВЕНЬ</div>
+    <div id="headerSub">Согласовано?</div>
+  </div>
+
+  <div id="grid"></div>
+
+  <script>
+    const LEVELS = [
+      { n: 1,  title: 'Забег',          sub: '10 км до офиса',       img: 'Pictures/Main_level%201.png', path: 'level1/index.html' },
+      { n: 2,  title: 'Собеседование',  sub: 'Пройди HR-фильтр',      img: 'Pictures/MainLevel2.png',     path: 'level2/index.html' },
+      { n: 3,  title: 'Совещание',      sub: 'Скоро...',              img: null, path: null },
+      { n: 4,  title: 'Согласование',   sub: 'Скоро...',              img: null, path: null },
+      { n: 5,  title: 'Командировка',   sub: 'Скоро...',              img: null, path: null },
+      { n: 6,  title: 'Аудит',          sub: 'Скоро...',              img: null, path: null },
+      { n: 7,  title: 'Презентация',    sub: 'Скоро...',              img: null, path: null },
+      { n: 8,  title: 'Дедлайн',        sub: 'Скоро...',              img: null, path: null },
+      { n: 9,  title: 'Корпоратив',     sub: 'Скоро...',              img: null, path: null },
+      { n: 10, title: 'Финал',          sub: 'Скоро...',              img: null, path: null },
+    ];
+
+    function isUnlocked(n) {
+      if (n === 1) return true;
+      if (n === 2) return !!localStorage.getItem('level1_done');
+      return false;
+    }
+
+    function buildGrid() {
+      const grid = document.getElementById('grid');
+      LEVELS.forEach(lvl => {
+        const unlocked = isUnlocked(lvl.n);
+        const card = document.createElement('div');
+        card.className = 'card' + (unlocked ? ' unlocked' : ' locked');
+
+        // Фон-картинка
+        const bg = document.createElement('div');
+        bg.className = 'card-bg';
+        if (lvl.img) {
+          bg.style.backgroundImage = `url('${lvl.img}')`;
+        } else {
+          bg.style.background = 'linear-gradient(135deg, #1a237e 0%, #0d1b3e 100%)';
+        }
+        card.appendChild(bg);
+
+        // Оверлей затемнения для заблюренных
+        if (!unlocked) {
+          const overlay = document.createElement('div');
+          overlay.className = 'card-overlay';
+          card.appendChild(overlay);
+
+          const lock = document.createElement('div');
+          lock.className = 'lock-icon';
+          lock.textContent = '🔒';
+          card.appendChild(lock);
+        }
+
+        // Бейдж номера
+        const badge = document.createElement('div');
+        badge.className = 'level-badge';
+        badge.textContent = `${lvl.n}`;
+        card.appendChild(badge);
+
+        // Подпись
+        const info = document.createElement('div');
+        info.className = 'card-info';
+        info.innerHTML = `<div class="card-title">${lvl.title}</div><div class="card-sub">${lvl.sub}</div>`;
+        card.appendChild(info);
+
+        // Кнопка «ИГРАТЬ» только для разблокированных
+        if (unlocked && lvl.path) {
+          const btn = document.createElement('button');
+          btn.className = 'play-btn';
+          btn.textContent = 'ИГРАТЬ';
+          btn.onclick = () => { window.location.href = lvl.path; };
+          card.appendChild(btn);
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    buildGrid();
+  </script>
+</body>
+</html>

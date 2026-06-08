@@ -1,0 +1,158 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0d1117;
+  font-family: sans-serif;
+  min-height: 100vh;
+  padding-bottom: 32px;
+}
+
+/* ── HEADER ── */
+#header {
+  text-align: center;
+  padding: 32px 16px 20px;
+  background: linear-gradient(180deg, #0d1117 60%, transparent);
+}
+#headerTitle {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #FFD700;
+  text-shadow: 0 0 24px rgba(255,200,0,0.5);
+}
+#headerSub {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+  letter-spacing: 2px;
+}
+
+/* ── СЕТКА ── */
+#grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 0 14px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── КАРТОЧКА ── */
+.card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 3/4;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.card.unlocked:active { transform: scale(0.96); }
+
+/* Фон */
+.card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  transition: filter 0.3s;
+}
+.card.locked .card-bg {
+  filter: blur(6px) brightness(0.45) grayscale(0.6);
+  transform: scale(1.08); /* компенсируем края блюра */
+}
+
+/* Оверлей для locked */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5,5,20,0.55);
+  z-index: 1;
+}
+
+/* Замок */
+.lock-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  font-size: 42px;
+  z-index: 2;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.8));
+}
+
+/* Номер уровня */
+.level-badge {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  background: rgba(0,0,0,0.6);
+  color: #FFD700;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,200,0,0.4);
+  z-index: 3;
+  letter-spacing: 1px;
+}
+.card.locked .level-badge {
+  color: #888;
+  border-color: rgba(150,150,150,0.3);
+}
+
+/* Градиент снизу + подпись */
+.card-info {
+  position: relative;
+  z-index: 3;
+  background: linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.0) 100%);
+  padding: 32px 12px 10px;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+.card-sub {
+  font-size: 12px;
+  color: #ccc;
+  margin-top: 2px;
+}
+.card.locked .card-title,
+.card.locked .card-sub { color: #666; }
+
+/* Кнопка ИГРАТЬ */
+.play-btn {
+  position: relative;
+  z-index: 3;
+  margin: 0 12px 12px;
+  width: calc(100% - 24px);
+  padding: 11px 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fff;
+  background: linear-gradient(135deg, #FF6B00, #FFB300);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(255,140,0,0.5);
+  animation: btnPulse 2s ease-in-out infinite;
+}
+.play-btn:active { transform: scale(0.95); animation: none; }
+
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(255,140,0,0.45); }
+  50%       { box-shadow: 0 0 30px rgba(255,140,0,0.85); }
+}
+
+/* Свечение рамки разблокированной карточки */
+.card.unlocked {
+  box-shadow: 0 0 0 2px rgba(255,180,0,0.35), 0 4px 24px rgba(0,0,0,0.6);
+}
+.card.locked {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
