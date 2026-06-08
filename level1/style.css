@@ -9,74 +9,98 @@ body { background: #1a1a2e; overflow: hidden; font-family: sans-serif; }
   z-index: 10;
 }
 #coverImg {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  z-index: 0;
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0;
 }
 
-/* ── ПУЛЬСАЦИЯ ── */
 @keyframes pulse {
   0%   { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
   50%  { transform: scale(1.08); box-shadow: 0 0 56px rgba(255,140,0,1),   0 8px 24px rgba(0,0,0,0.5); }
   100% { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
 }
-
 @keyframes glowRing {
   0%   { opacity: 0.6; transform: scale(1); }
   100% { opacity: 0;   transform: scale(1.7); }
 }
 
 #playBtn {
-  position: relative; z-index: 1;
-  margin-bottom: 60px;
-  padding: 18px 64px;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: #fff;
+  position: relative; z-index: 1; margin-bottom: 60px;
+  padding: 18px 64px; font-size: 26px; font-weight: 900;
+  letter-spacing: 4px; text-transform: uppercase; color: #fff;
   background: linear-gradient(135deg, #FF6B00, #FFB300);
-  border: 3px solid rgba(255,255,255,0.5);
-  border-radius: 50px;
+  border: 3px solid rgba(255,255,255,0.5); border-radius: 50px;
   box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5);
-  cursor: pointer;
-  animation: pulse 1.6s ease-in-out infinite;
+  cursor: pointer; animation: pulse 1.6s ease-in-out infinite;
 }
-
-/* Кольцо расходящегося свечения */
 #playBtn::before {
-  content: '';
-  position: absolute; inset: -6px;
-  border-radius: 50px;
+  content: ''; position: absolute; inset: -6px; border-radius: 50px;
   border: 3px solid rgba(255,180,0,0.8);
-  animation: glowRing 1.6s ease-out infinite;
-  pointer-events: none;
+  animation: glowRing 1.6s ease-out infinite; pointer-events: none;
 }
-
-#playBtn:active {
-  transform: scale(0.95) !important;
-  animation: none;
-  box-shadow: 0 0 16px rgba(255,140,0,0.4);
-}
+#playBtn:active { transform: scale(0.95) !important; animation: none; }
 
 /* ── ИГРА ── */
 #gameWrapper { width: 100vw; height: 100vh; }
 canvas { display: block; width: 100vw; height: 100vh; }
 #ui {
-  position: fixed; top: 12px; left: 50%;
-  transform: translateX(-50%);
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
   color: #fff; font-size: 20px;
   background: rgba(0,0,0,0.5); padding: 6px 16px; border-radius: 20px;
 }
+
+/* ── ЭКРАН РЕЗУЛЬТАТА (Game Over / Финиш) ── */
 #result {
-  position: fixed; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff; font-size: 28px; text-align: center;
-  background: rgba(0,0,0,0.85); padding: 30px 40px; border-radius: 16px;
+  display: none;
+  position: fixed; inset: 0; z-index: 20;
+  align-items: center; justify-content: center;
+  background: rgba(10,10,30,0.88);
+  backdrop-filter: blur(6px);
 }
-#result button {
-  margin-top: 16px; padding: 10px 28px;
-  font-size: 18px; border: none; border-radius: 10px;
-  background: #FF6B00; color: #fff; cursor: pointer;
+#result.show { display: flex; }
+
+#resultCard {
+  background: linear-gradient(160deg, #1e2a4a, #0f1628);
+  border: 2px solid rgba(255,200,50,0.3);
+  border-radius: 24px;
+  padding: 36px 32px 28px;
+  text-align: center;
+  width: min(88vw, 360px);
+  box-shadow: 0 0 60px rgba(255,180,0,0.15);
+  animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
 }
+@keyframes cardIn {
+  from { transform: scale(0.6) translateY(40px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);      opacity: 1; }
+}
+
+#resultEmoji { font-size: 64px; line-height: 1; margin-bottom: 8px; }
+#resultTitle { font-size: 30px; font-weight: 900; color: #FFD700; margin-bottom: 18px; }
+
+.stat-row {
+  display: flex; justify-content: space-between;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px; padding: 10px 18px;
+  margin-bottom: 10px; font-size: 17px; color: #ccc;
+}
+.stat-row span { font-weight: 700; color: #fff; }
+
+#medal { font-size: 40px; margin: 14px 0 4px; }
+#medalLabel { font-size: 14px; color: #aaa; margin-bottom: 20px; }
+
+.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
+
+.btn-retry, .btn-share {
+  flex: 1; padding: 14px 0; font-size: 17px; font-weight: 700;
+  border: none; border-radius: 14px; cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-retry:active, .btn-share:active { transform: scale(0.95); }
+
+.btn-retry {
+  background: rgba(255,255,255,0.12); color: #fff;
+}
+.btn-share {
+  background: linear-gradient(135deg, #229ED9, #1a7fb5);
+  color: #fff;
+}
+.btn-share-icon { margin-right: 6px; }
