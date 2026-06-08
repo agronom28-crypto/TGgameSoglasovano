@@ -7,27 +7,30 @@ const TOTAL_DIST = 10;
 const BASE_SPEED = TOTAL_DIST / GAME_DURATION;
 const PLAYER_X = 80;
 
-// Размер отображаемого спрайта
-const SPRITE_W = 64;
-const SPRITE_H = 96;
+// Спрайтшит: 6 кадров горизонтально
+const FRAME_COUNT = 6;
+const FRAME_W     = 128;   // ширина одного кадра в спрайтшите
+const FRAME_H     = 192;   // высота кадра в спрайтшите
+const SPRITE_W    = 64;    // размер на экране
+const SPRITE_H    = 96;
+const ANIM_FPS    = 12;    // кадров в секунду (нормальный бег)
 
-// Хитбокс персонажа (внутри спрайта)
+// Хитбокс
 const P = {
   left:    8,
   right:  56,
   fullTop: -SPRITE_H,
-  duckTop: -SPRITE_H * 0.55,
+  duckTop: -Math.round(SPRITE_H * 0.55),
 };
 
-let playerImg = null;
+let runImg    = null;
 let imgLoaded = false;
 
 function loadAssets(cb) {
-  playerImg = new Image();
-  playerImg.onload  = () => { imgLoaded = true; cb(); };
-  playerImg.onerror = () => { imgLoaded = false; cb(); };  // fallback — рисуем запасным цветом
-  // Путь относительно от level1/
-  playerImg.src = '../Pictures/3D%20person.png';
+  runImg = new Image();
+  runImg.onload  = () => { imgLoaded = true;  cb(); };
+  runImg.onerror = () => { imgLoaded = false; cb(); };
+  runImg.src = '../Pictures/run_spritesheet.png';
 }
 
 let state = {};
@@ -158,37 +161,30 @@ function drawFlash() {
 // ─── ХИТБОКСЫ ────────────────────────────────────────────────────────────────────
 function playerBox() {
   const duck = state.isDucking;
-  const topOffset = duck ? P.duckTop : P.fullTop;
   return {
     x1: PLAYER_X + P.left,
     x2: PLAYER_X + P.right,
-    y1: state.y + topOffset,
+    y1: state.y + (duck ? P.duckTop : P.fullTop),
     y2: state.y,
   };
 }
 function obstacleBox(o) {
-  if (o.type === 'low') {
-    return { x1: o.x + 4, x2: o.x + 38, y1: GROUND_Y - 46, y2: GROUND_Y - 4 };
-  } else {
-    return { x1: o.x + 4, x2: o.x + 36, y1: GROUND_Y - 110, y2: GROUND_Y - 62 };
-  }
+  if (o.type === 'low') return { x1: o.x + 4, x2: o.x + 38, y1: GROUND_Y - 46, y2: GROUND_Y - 4 };
+  return { x1: o.x + 4, x2: o.x + 36, y1: GROUND_Y - 110, y2: GROUND_Y - 62 };
 }
-function boostBox(b) {
-  return { x1: b.x, x2: b.x + 32, y1: GROUND_Y - 130, y2: GROUND_Y - 90 };
-}
-function overlaps(a, b) {
-  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
-}
+function boostBox(b) { return { x1: b.x, x2: b.x + 32, y1: GROUND_Y - 130, y2: GROUND_Y - 90 }; }
+function overlaps(a, b) { return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1; }
 
 // ─── INIT ───────────────────────────────────────────────────────────────────────
 function initGame() {
   canvas = document.getElementById('gameCanvas');
-  ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
+  ctx    = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
   GROUND_Y = canvas.height * 0.75;
   dustParticles = []; burstParticles = [];
-  flash = { active: false, life: 0 }; shake = { x: 0, y: 0, life: 0 };
+  flash = { active: false, life: 0 };
+  shake = { x: 0, y: 0, life: 0 };
   initParallax();
   state = {
     y: GROUND_Y, vy: 0,
@@ -197,10 +193,11 @@ function initGame() {
     distance: 0, timeLeft: GAME_DURATION, running: true,
     obstacles: [], boosts: [],
     lastObstacleTime: 0, lastBoostTime: 0,
-    lastFrame: Date.now(), animTime: 0, step: 0,
+    lastFrame: Date.now(),
+    animTime: 0,  // аккумулированное время
+    frame: 0,     // текущий кадр
   };
   bindControls();
-  // Загружаем спрайт персонажа, затем стартуем цикл
   loadAssets(() => loop());
 }
 
@@ -213,7 +210,7 @@ function bindControls() {
   canvas.addEventListener('touchend', e => {
     const dy = e.changedTouches[0].clientY - touchStartY;
     if (dy < -25) doJump();
-    if (dy > 25) doDuck();
+    if (dy > 25)  doDuck();
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'ArrowUp'   || e.key === ' ') { e.preventDefault(); doJump(); }
@@ -222,71 +219,70 @@ function bindControls() {
 }
 
 // ─── РИСУЕМ ПЕРСОНАЖА ─────────────────────────────────────────────────────────
-function drawCharacter(groundY, isDucking, boost) {
-  if (!imgLoaded) {
-    // Запасной рендер: простой цветной прямоугольник
-    ctx.fillStyle = boost ? '#FFD700' : '#1565C0';
-    ctx.fillRect(PLAYER_X + P.left, groundY + P.fullTop, P.right - P.left, -P.fullTop);
-    return;
-  }
+function drawCharacter() {
+  const groundY = state.y;
+  const duck    = state.isDucking;
+  const jumping = state.isJumping;
+  const boost   = state.boost;
 
   ctx.save();
 
-  // Боб при беге
-  const bob = state.isJumping ? 0 : Math.abs(Math.sin(state.step * Math.PI * 2)) * 3;
+  // Размер и позиция
+  let dW = SPRITE_W;
+  let dH = SPRITE_H;
+  let dX = PLAYER_X;
+  let dY = groundY - SPRITE_H;
 
-  let drawW = SPRITE_W;
-  let drawH = SPRITE_H;
-  let drawX = PLAYER_X;
-  let drawY = groundY - SPRITE_H - bob;
-
-  if (isDucking) {
-    // Присед — сжимаем по вертикали, растягиваем по горизонтали
-    drawH = SPRITE_H * 0.55;
-    drawW = SPRITE_W * 1.2;
-    drawX = PLAYER_X - (drawW - SPRITE_W) / 2;
-    drawY = groundY - drawH;
+  if (duck) {
+    dH = Math.round(SPRITE_H * 0.55);
+    dW = Math.round(SPRITE_W * 1.2);
+    dX = PLAYER_X - Math.round((dW - SPRITE_W) / 2);
+    dY = groundY - dH;
   }
 
-  // Буст-оверлей: золотой оттенок
-  if (boost) {
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur  = 24;
+  // Наклон вперёд при бусте
+  if (boost && !duck) {
+    ctx.translate(dX + dW / 2, groundY);
+    ctx.rotate(-0.12);
+    ctx.translate(-(dX + dW / 2), -groundY);
   }
 
-  ctx.drawImage(playerImg, drawX, drawY, drawW, drawH);
+  if (boost) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 24; }
+
+  if (imgLoaded) {
+    // В прыжке — фиксируем кадр 2 (фаза полёта)
+    const frameIdx = jumping ? 2 : state.frame;
+    const sx = frameIdx * FRAME_W;
+    ctx.drawImage(runImg, sx, 0, FRAME_W, FRAME_H, dX, dY, dW, dH);
+  } else {
+    ctx.fillStyle = boost ? '#FFD700' : '#1565C0';
+    ctx.fillRect(dX, dY, dW, dH);
+  }
 
   ctx.restore();
 }
 
 // ─── ОБЪЕКТЫ ────────────────────────────────────────────────────────────────────
 function spawnObstacle() {
-  const type = Math.random() > 0.5 ? 'low' : 'high';
-  state.obstacles.push({ type, x: canvas.width + 40 });
+  state.obstacles.push({ type: Math.random() > 0.5 ? 'low' : 'high', x: canvas.width + 40 });
 }
-function spawnBoost() {
-  state.boosts.push({ x: canvas.width + 40 });
-}
+function spawnBoost() { state.boosts.push({ x: canvas.width + 40 }); }
 
 function drawObstacles() {
   state.obstacles.forEach(o => {
     const b = obstacleBox(o);
     if (o.type === 'low') {
-      ctx.font = '40px sans-serif';
-      ctx.fillText('🐕', b.x1 - 2, b.y2 + 2);
+      ctx.font = '40px sans-serif'; ctx.fillText('🐕', b.x1 - 2, b.y2 + 2);
     } else {
       ctx.font = '38px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('🎈', (b.x1 + b.x2) / 2, b.y2 + 4);
-      ctx.textAlign = 'left';
+      ctx.fillText('🎈', (b.x1 + b.x2) / 2, b.y2 + 4); ctx.textAlign = 'left';
     }
   });
 }
-
 function drawBoosts() {
   const pulse = 1 + Math.sin(Date.now() / 200) * 0.15;
   state.boosts.forEach(b => {
-    const box = boostBox(b);
-    const cx = (box.x1 + box.x2) / 2;
+    const box = boostBox(b), cx = (box.x1 + box.x2) / 2;
     ctx.save();
     ctx.globalAlpha = state.isJumping ? 1 : 0.35;
     ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18 * pulse;
@@ -297,37 +293,47 @@ function drawBoosts() {
       ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#FFD700';
       ctx.fillText('↑', cx, box.y2 + 26);
     }
-    ctx.textAlign = 'left';
-    ctx.restore();
+    ctx.textAlign = 'left'; ctx.restore();
   });
 }
 
 // ─── UPDATE ──────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (!state.running) return;
-  const runSpeed = state.boost ? 8 : 5;
-  const prevStep = state.step;
-  state.animTime += dt * runSpeed;
-  state.step = state.animTime % 1;
-  if (!state.isJumping && !state.isDucking) {
-    const crossed = (ph, prev, cur) => (prev < ph && cur >= ph) || (prev > cur && (cur >= ph || prev < ph));
-    if (crossed(0.0, prevStep, state.step) || crossed(0.5, prevStep, state.step)) spawnDust(state.boost);
+
+  // Листаем кадры по таймеру
+  const fps = state.boost ? ANIM_FPS * 1.6 : ANIM_FPS;
+  state.animTime += dt;
+  const frameDur = 1 / fps;
+  if (state.animTime >= frameDur) {
+    state.animTime -= frameDur;
+    state.frame = (state.frame + 1) % FRAME_COUNT;
+    // Пыль на кадрах приземления (0 и 3)
+    if (!state.isJumping && (state.frame === 0 || state.frame === 3))
+      spawnDust(state.boost);
   }
+
   updateDust(dt); updateFlash(dt); updateParallax(dt);
+
   state.timeLeft -= dt;
   if (state.timeLeft <= 0) { endGame('timeout'); return; }
+
   const speed = state.boost ? BASE_SPEED * 2.5 : BASE_SPEED;
   state.distance += speed * dt;
   if (state.boostTimer > 0) { state.boostTimer -= dt; if (state.boostTimer <= 0) state.boost = false; }
   if (state.distance >= TOTAL_DIST) { endGame('finish'); return; }
+
   state.y += state.vy; state.vy += GRAVITY;
   if (state.y >= GROUND_Y) { state.y = GROUND_Y; state.vy = 0; state.isJumping = false; }
+
   const moveSpeed = (canvas.width / 2.2) * (state.boost ? 2.5 : 1);
   state.obstacles.forEach(o => o.x -= moveSpeed * dt);
   state.boosts.forEach(b => b.x -= moveSpeed * dt);
+
   const now = Date.now();
   if (now - state.lastObstacleTime > 1600) { spawnObstacle(); state.lastObstacleTime = now; }
-  if (now - state.lastBoostTime    > 4000)  { spawnBoost();    state.lastBoostTime    = now; }
+  if (now - state.lastBoostTime    > 4000) { spawnBoost();    state.lastBoostTime    = now; }
+
   state.obstacles = state.obstacles.filter(o => o.x > -100);
   state.boosts    = state.boosts.filter(b => b.x > -100);
   checkCollisions();
@@ -336,92 +342,14 @@ function update(dt) {
 // ─── КОЛЛИЗИИ ─────────────────────────────────────────────────────────────────
 function checkCollisions() {
   const pb = playerBox();
-  state.obstacles.forEach(o => {
-    if (overlaps(pb, obstacleBox(o))) endGame('hit');
-  });
+  state.obstacles.forEach(o => { if (overlaps(pb, obstacleBox(o))) endGame('hit'); });
   state.boosts = state.boosts.filter(b => {
     if (state.isJumping && overlaps(pb, boostBox(b))) {
-      state.boost = true; state.boostTimer = 5;
-      triggerBoostFlash();
-      return false;
+      state.boost = true; state.boostTimer = 5; triggerBoostFlash(); return false;
     }
     return true;
   });
 }
-
-// ─── ФИНИШ + ЗДАНИЕ ОФИСА ─────────────────────────────────────────────────────
-function drawFinishLine() {
-  const remaining = TOTAL_DIST - state.distance;
-  if (remaining > 2) return; // показываем только когда осталось меньше 2 км
-
-  // Позиция финиша на экране — появляется справа, движется влево
-  const screenX = canvas.width * 0.6 + (remaining / 2) * canvas.width * 0.8;
-
-  // ── Здание офиса (за финишной чертой) ──
-  const bX = screenX + 20;
-  const bW = 160, bH = 200;
-  const bY = GROUND_Y - bH;
-
-  // Основной корпус
-  ctx.fillStyle = '#90A4AE';
-  ctx.fillRect(bX, bY, bW, bH);
-
-  // Тёмная передняя грань
-  ctx.fillStyle = '#78909C';
-  ctx.fillRect(bX, bY, bW * 0.1, bH);
-
-  // Окна
-  ctx.fillStyle = '#B3E5FC';
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 4; col++) {
-      const wx = bX + 16 + col * 34;
-      const wy = bY + 20 + row * 36;
-      ctx.fillRect(wx, wy, 20, 24);
-      // Отражение в окне
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
-      ctx.fillRect(wx, wy, 6, 10);
-      ctx.fillStyle = '#B3E5FC';
-    }
-  }
-
-  // Крыша
-  ctx.fillStyle = '#546E7A';
-  ctx.fillRect(bX - 6, bY - 10, bW + 12, 12);
-
-  // Надпись "OFFICE"
-  ctx.fillStyle = '#ECEFF1';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('OFFICE', bX + bW / 2, bY + bH - 14);
-  ctx.textAlign = 'left';
-
-  // ── Финишная черта ──
-  // Столбы
-  ctx.fillStyle = '#333';
-  ctx.fillRect(screenX - 4, GROUND_Y - 160, 8, 160);
-  ctx.fillRect(screenX + 60, GROUND_Y - 160, 8, 160);
-
-  // Чёрно-белая лента
-  const stripes = 10;
-  const stripeH = 16, tapeY = GROUND_Y - 160;
-  for (let i = 0; i < stripes; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
-    ctx.fillRect(screenX - 4 + i * (68 / stripes), tapeY, 68 / stripes, stripeH);
-  }
-
-  // Флажки 🏁
-  ctx.font = '28px sans-serif';
-  ctx.fillText('🏁', screenX - 18, GROUND_Y - 160);
-  ctx.fillText('🏁', screenX + 52, GROUND_Y - 160);
-
-  // Подпись "ФИНИШ"
-  ctx.fillStyle = '#D32F2F';
-  ctx.font = 'bold 18px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('ФИНИШ', screenX + 32, GROUND_Y - 170);
-  ctx.textAlign = 'left';
-}
-
 
 // ─── DRAW ──────────────────────────────────────────────────────────────────────
 function draw() {
@@ -435,9 +363,8 @@ function draw() {
   ctx.fillStyle = rs; ctx.fillRect(0, GROUND_Y - 10, canvas.width, 20);
   drawBoosts();
   drawObstacles();
-  drawFinishLine();
   drawDust();
-  drawCharacter(state.y, state.isDucking, state.boost);
+  drawCharacter();
   if (state.timeLeft > 55) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('↑ прыжок   ↓ присесть', canvas.width / 2, GROUND_Y - 120);
@@ -445,7 +372,7 @@ function draw() {
   }
   ctx.restore();
   drawFlash();
-  document.getElementById('timer').textContent = Math.ceil(state.timeLeft);
+  document.getElementById('timer').textContent    = Math.ceil(state.timeLeft);
   document.getElementById('distance').textContent = state.distance.toFixed(2);
 }
 
@@ -488,7 +415,7 @@ function endGame(reason) {
 
 function loop() {
   const now = Date.now();
-  const dt = Math.min((now - state.lastFrame) / 1000, 0.05);
+  const dt  = Math.min((now - state.lastFrame) / 1000, 0.05);
   state.lastFrame = now;
   update(dt); draw();
   requestAnimationFrame(loop);
