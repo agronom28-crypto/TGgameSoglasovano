@@ -56,12 +56,13 @@ body {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center top;
+  background-position: center center;
+  background-repeat: no-repeat;
   transition: filter 0.3s;
 }
 .card.locked .card-bg {
   filter: blur(6px) brightness(0.45) grayscale(0.6);
-  transform: scale(1.08); /* компенсируем края блюра */
+  transform: scale(1.08);
 }
 
 /* Оверлей для locked */
