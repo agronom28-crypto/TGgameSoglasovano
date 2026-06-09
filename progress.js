@@ -4,13 +4,42 @@
 
 const STORAGE_KEY   = 'soglasovano_progress';
 const NICKNAME_KEY  = 'soglasovano_nickname';
-// Рабочий сервер на Railway (agronom28-crypto/soglasovano-analytics)
+const TG_USER_KEY   = 'soglasovano_tg_user'; // { id, username }
 const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
 
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
 
 function getTgUser() {
   return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+}
+
+// ─── Кэш TG-данных ─────────────────────────────────────────
+// Вызывается один раз при старте (из index.html после загрузки TG SDK)
+function cacheTgUser() {
+  const user = getTgUser();
+  if (user?.id) {
+    try {
+      localStorage.setItem(TG_USER_KEY, JSON.stringify({
+        id:       String(user.id),
+        username: user.username || '', // только @username, без first_name
+      }));
+    } catch(e) {}
+  }
+}
+
+// Возвращает кэшированные TG-данные (или то что есть сейчас)
+function getCachedTgUser() {
+  // Сначала пробуем live-данные
+  const live = getTgUser();
+  if (live?.id) {
+    return { id: String(live.id), username: live.username || '' };
+  }
+  // Fallback: кэш из localStorage
+  try {
+    const raw = localStorage.getItem(TG_USER_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
 }
 
 // ─── Никнейм ──────────────────────────────────────────────
@@ -64,19 +93,17 @@ function loadCloud(callback) {
 // ─── Отправка аналитики ────────────────────────────────────
 function sendAnalytics(levelN, data) {
   try {
-    const user       = getTgUser();
-    const userId     = user?.id       || 'anonymous';
-    // username — реальный TG @username (или first_name если нет @username)
-    const tgUsername = user?.username || user?.first_name || '';
-    // nickname — имя, которое игрок ввёл сам в игре
-    const nickname   = loadNicknameLocal() || '';
+    const tgUser   = getCachedTgUser();       // берём кэшированные данные
+    const userId   = tgUser?.id || 'anonymous';
+    const tgUsername = tgUser?.username || ''; // только реальный @username
+    const nickname = loadNicknameLocal() || '';
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId,
-        username: tgUsername,  // ← колонка D: только @TG-имя
-        nickname,              // ← колонка C: никнейм из игры
+        username: tgUsername,  // колонка D: @TG-имя
+        nickname,              // колонка C: никнейм из игры
         level:    levelN,
         time:     data.time     || 0,
         distance: data.distance || data.score || 0,
@@ -88,8 +115,6 @@ function sendAnalytics(levelN, data) {
 }
 
 // ─── Рейтинг (топ-5) ──────────────────────────────────────
-// Endpoint: GET /api/leaderboard?level=N&top=5
-// Ответ: { level, top: [{ rank, name, score, time }, ...] }
 function fetchLeaderboard(levelN, callback) {
   fetch(`${ANALYTICS_URL}/api/leaderboard?level=${levelN}&top=5`)
     .then(r => r.json())
@@ -151,5 +176,5 @@ function getLevelStats(levelN, progressData) {
 window.Progress = {
   loadProgress, completeLevel, isLevelUnlocked, getLevelStats,
   sendAnalytics, getNickname, setNickname, fetchLeaderboard,
-  loadNicknameLocal,
+  loadNicknameLocal, cacheTgUser, getCachedTgUser,
 };
