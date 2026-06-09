@@ -5,27 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Уровень 2 — Собеседование</title>
   <link rel="stylesheet" href="style.css">
+  <script src="../progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    /* Фоновое видео */
     #bgVideo {
       position: fixed; inset: 0; z-index: 0;
       width: 100%; height: 100%;
       object-fit: cover;
       pointer-events: none;
     }
-    /* Все экраны поверх видео */
     #resultScreen, #quizScreen { position: relative; z-index: 1; }
   </style>
 </head>
 <body>
 
-<!-- ФОНОВОЕ ВИДЕО — крутится бесконечно -->
 <video id="bgVideo" autoplay loop muted playsinline preload="auto">
   <source src="../Pictures/Level2_VideoFon_QUIZ.mp4" type="video/mp4">
 </video>
 
-<!-- ФИНИШ -->
 <div id="resultScreen">
   <div id="resultCard">
     <div id="resultEmoji">🎉</div>
@@ -39,7 +36,6 @@
   </div>
 </div>
 
-<!-- КВИЗ -->
 <div id="quizScreen">
   <div id="quizHeader">
     <div id="hrAvatar">👔</div>
@@ -63,7 +59,6 @@
 </div>
 
 <script>
-// Гарантируем запуск фонового видео после жеста пользователя
 window.addEventListener('load', () => {
   const v = document.getElementById('bgVideo');
   v.play().catch(() => {
@@ -249,16 +244,20 @@ function showResult() {
   document.getElementById('quizScreen').style.display = 'none';
   document.getElementById('resultScreen').style.display = 'flex';
   document.getElementById('resultScore').textContent = `Правильных ответов: ${score} из 20`;
-  let emoji, title, comment;
-  if (score >= 18)      { emoji='🏆'; title='ПРИНЯТ(А)!';             comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; }
-  else if (score >= 14) { emoji='😎'; title='Почти идеал!';           comment='Мы вам перезвоним. Честно. Наверное.'; }
-  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...';      comment='Приходите через полгода. Подучитесь.'; }
-  else if (score >= 5)  { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; }
-  else                  { emoji='💀'; title='Это было... смело';       comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; }
+  let emoji, title, comment, passed;
+  if (score >= 18)      { emoji='🏆'; title='ПРИНЯТ(А)!';             comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; passed=true; }
+  else if (score >= 14) { emoji='😎'; title='Почти идеал!';           comment='Мы вам перезвоним. Честно. Наверное.'; passed=true; }
+  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...';      comment='Приходите через полгода. Подучитесь.'; passed=false; }
+  else if (score >= 5)  { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; passed=false; }
+  else                  { emoji='💀'; title='Это было... смело';       comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; passed=false; }
   document.getElementById('resultEmoji').textContent   = emoji;
   document.getElementById('resultTitle').textContent   = title;
   document.getElementById('resultComment').textContent = comment;
-  localStorage.setItem('level2_done', '1');
+
+  if (passed && window.Progress) {
+    const medal = score >= 18 ? '🥇' : '🥈';
+    Progress.completeLevel(2, { time: 0, medal: medal, score: score });
+  }
 }
 
 showQuestion();

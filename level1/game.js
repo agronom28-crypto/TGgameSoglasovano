@@ -535,7 +535,14 @@ function endGame(reason) {
   const medal=getMedal(reason,score,elapsed);
   if (window.Telegram?.WebApp)
     Telegram.WebApp.sendData(JSON.stringify({score,time:elapsed,reason}));
-  if (reason==='finish') { playFinishCutscene(elapsed, score, medal); return; }
+  if (reason==='finish') {
+    // Сохраняем прогресс через progress.js
+    if (window.Progress) {
+      Progress.completeLevel(1, { time: elapsed, medal: medal.icon, score: score });
+    }
+    playFinishCutscene(elapsed, score, medal);
+    return;
+  }
   if (reason==='timeout') {
     document.getElementById('resultEmoji').textContent='⏰';
     document.getElementById('resultTitle').textContent='Время вышло!';

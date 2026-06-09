@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Уровень 3 — Деньги с неба</title>
   <link rel="stylesheet" href="style.css">
+  <script src="../progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -31,7 +32,7 @@
     <div id="startTitle">Деньги с неба!</div>
     <div id="startDesc">
       Собери <b>100 согласиков</b> за 60 секунд<br>
-      Тапай по монетам — считай балансС<br>
+      Тапай по монетам — считай баланс<br>
       <span id="warnDyna">💣 Динамит — баланс обнуляется!</span>
     </div>
     <button id="startBtn" onclick="startGame()">НАЧАТЬ ▶</button>
@@ -66,14 +67,13 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// Геймплей константы
 const GAME_DURATION   = 60;
 const TARGET_SCORE    = 100;
 const TOTAL_COINS     = 150;
 const TOTAL_DYNAMITES = 5;
 const COIN_RADIUS     = 26;
 const DYNA_RADIUS     = 28;
-const TAP_RADIUS      = 48; // зона попадания
+const TAP_RADIUS      = 48;
 
 let items     = [];
 let score     = 0;
@@ -84,20 +84,18 @@ let running   = false;
 let lastTime  = 0;
 let spawnedCoins = 0;
 let spawnedDyna  = 0;
-let spawnTimer   = 0;
 
-// Спавн интервалы (ms)
-const COIN_SPAWN_INTERVAL = GAME_DURATION * 1000 / TOTAL_COINS;   // ~400ms
-const DYNA_SPAWN_INTERVAL = GAME_DURATION * 1000 / TOTAL_DYNAMITES; // 12000ms
+const COIN_SPAWN_INTERVAL = GAME_DURATION * 1000 / TOTAL_COINS;
+const DYNA_SPAWN_INTERVAL = GAME_DURATION * 1000 / TOTAL_DYNAMITES;
 
 let nextCoinIn = 0;
-let nextDynaIn = Math.random() * 8000 + 4000; // первый динамит через 4-12 секунд
+let nextDynaIn = Math.random() * 8000 + 4000;
 
 function spawnCoin() {
   if (spawnedCoins >= TOTAL_COINS) return;
   spawnedCoins++;
   const x = COIN_RADIUS + Math.random() * (W - COIN_RADIUS * 2);
-  const speed = 120 + Math.random() * 140; // px/s
+  const speed = 120 + Math.random() * 140;
   const value = Math.random() < 0.15 ? 5 : (Math.random() < 0.35 ? 2 : 1);
   items.push({ type: 'coin', x, y: -COIN_RADIUS, speed, value, scale: 1, alpha: 1 });
 }
@@ -115,14 +113,11 @@ function drawCoin(item) {
   ctx.globalAlpha = item.alpha;
   ctx.translate(item.x, item.y);
   ctx.scale(item.scale, item.scale);
-
   const r = COIN_RADIUS;
-  // тень
   ctx.beginPath();
   ctx.ellipse(3, 4, r, r * 0.92, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#b8860b';
   ctx.fill();
-  // основа
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   const g = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.1, 0, 0, r);
@@ -134,13 +129,11 @@ function drawCoin(item) {
   ctx.strokeStyle = '#c8960c';
   ctx.lineWidth = 2;
   ctx.stroke();
-  // знак
   ctx.fillStyle = '#7a5800';
   ctx.font = `bold ${r * 0.9}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('₾', 1, 1);
-
   if (item.value > 1) {
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${r * 0.55}px sans-serif`;
@@ -155,16 +148,13 @@ function drawDynamite(item) {
   ctx.translate(item.x, item.y);
   ctx.rotate(Math.sin(item.wobble) * 0.18);
   ctx.scale(item.scale, item.scale);
-
   const r = DYNA_RADIUS;
-  // фитиль
   ctx.strokeStyle = '#888';
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(0, -r);
   ctx.bezierCurveTo(r * 0.8, -r * 1.6, r * 1.2, -r * 0.6, r * 0.4, -r * 0.15);
   ctx.stroke();
-  // огонь фитиля
   ctx.beginPath();
   ctx.arc(r * 0.4 + Math.sin(item.wobble * 3) * 2, -r * 0.15, 5, 0, Math.PI * 2);
   ctx.fillStyle = '#ff6600';
@@ -173,7 +163,6 @@ function drawDynamite(item) {
   ctx.arc(r * 0.4 + Math.sin(item.wobble * 3) * 2, -r * 0.15, 3, 0, Math.PI * 2);
   ctx.fillStyle = '#ffdd00';
   ctx.fill();
-  // тело
   ctx.beginPath();
   ctx.roundRect(-r * 0.6, -r * 0.1, r * 1.2, r * 1.8, 8);
   const g2 = ctx.createLinearGradient(-r * 0.6, 0, r * 0.6, 0);
@@ -182,12 +171,10 @@ function drawDynamite(item) {
   g2.addColorStop(1, '#922b21');
   ctx.fillStyle = g2;
   ctx.fill();
-  // полоска
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.beginPath();
   ctx.roundRect(-r * 0.45, -r * 0.05, r * 0.2, r * 1.7, 4);
   ctx.fill();
-  // надпись
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${r * 0.55}px sans-serif`;
   ctx.textAlign = 'center';
@@ -195,8 +182,6 @@ function drawDynamite(item) {
   ctx.fillText('💣', 0, r * 0.8);
   ctx.restore();
 }
-
-function drawParticles() {}
 
 let particles = [];
 function burstCoins(x, y, color) {
@@ -206,7 +191,7 @@ function burstCoins(x, y, color) {
       x, y,
       vx: Math.cos(angle) * (60 + Math.random() * 60),
       vy: Math.sin(angle) * (60 + Math.random() * 60),
-      alpha: 1, color, life: 0.6
+      alpha: 1, color, life: 0.6, size: 5
     });
   }
 }
@@ -254,8 +239,6 @@ function drawBackground() {
   sky.addColorStop(1, '#1a3a2a');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
-
-  // Звёзды
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   const stars = [[50,40],[120,90],[200,30],[300,70],[400,20],[500,55],[600,35],[700,80],[800,15],[150,150],[350,120],[550,100]];
   stars.forEach(([sx, sy]) => {
@@ -270,7 +253,6 @@ function drawGround() {
   ctx.fillRect(0, H - 6, W, 6);
 }
 
-// Баланс-бар внизу
 function drawProgressBar() {
   const barW = W - 32;
   const barH = 10;
@@ -288,7 +270,6 @@ function drawProgressBar() {
   ctx.beginPath();
   ctx.roundRect(barX, barY, barW * pct, barH, 5);
   ctx.fill();
-  // метка 100
   ctx.strokeStyle = 'rgba(255,215,0,0.8)';
   ctx.lineWidth = 2;
   const markX = barX + barW;
@@ -296,11 +277,13 @@ function drawProgressBar() {
 }
 
 let timerInterval = null;
+let gameStartTime = 0;
 
 function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   running = true;
   lastTime = performance.now();
+  gameStartTime = performance.now();
   nextCoinIn = 200;
   nextDynaIn = Math.random() * 8000 + 5000;
 
@@ -308,7 +291,7 @@ function startGame() {
     if (!running) return;
     timeLeft--;
     document.getElementById('timerVal').textContent = timeLeft;
-    if (timeLeft <= 0) endGame();
+    if (timeLeft <= 0) endGame(false);
   }, 1000);
 
   requestAnimationFrame(loop);
@@ -319,7 +302,6 @@ function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, 0.1);
   lastTime = ts;
 
-  // Спавн
   nextCoinIn -= dt * 1000;
   nextDynaIn -= dt * 1000;
   if (nextCoinIn <= 0 && spawnedCoins < TOTAL_COINS) {
@@ -331,13 +313,11 @@ function loop(ts) {
     nextDynaIn = (GAME_DURATION * 1000 / TOTAL_DYNAMITES) * (0.7 + Math.random() * 0.6);
   }
 
-  // Движение
   items.forEach(item => {
     item.y += item.speed * dt;
     if (item.type === 'dyna') item.wobble += dt * 4;
   });
 
-  // Убрать упавшие
   items = items.filter(item => {
     if (item.y > H + 60) {
       if (item.type === 'coin') { missed++; document.getElementById('missedVal').textContent = missed; }
@@ -348,7 +328,6 @@ function loop(ts) {
 
   updateParticles(dt);
 
-  // Рисунок
   drawBackground();
   items.forEach(item => item.type === 'coin' ? drawCoin(item) : drawDynamite(item));
   drawParticlesList();
@@ -362,7 +341,6 @@ function handleTap(cx, cy) {
   if (!running) return;
   let hit = null;
   let minDist = Infinity;
-  // Ищем ближайший
   items.forEach(item => {
     const dx = item.x - cx;
     const dy = item.y - cy;
@@ -384,7 +362,6 @@ function handleTap(cx, cy) {
     burstCoins(hit.x, hit.y, '#ffd700');
     if (score >= TARGET_SCORE) { endGame(true); return; }
   } else {
-    // ДИНАМИТ!
     burstExplosion(hit.x, hit.y);
     score = 0;
     document.getElementById('scoreVal').textContent = 0;
@@ -409,13 +386,17 @@ function showBooom() {
 function endGame(win) {
   running = false;
   clearInterval(timerInterval);
+  const elapsed = parseFloat(((performance.now() - gameStartTime) / 1000).toFixed(1));
   const won = win || score >= TARGET_SCORE;
   document.getElementById('resultScreen').style.display = 'flex';
   if (won) {
     document.getElementById('resultEmoji').textContent = '🏆';
     document.getElementById('resultTitle').textContent = 'СОГЛАСОВАНО!';
     document.getElementById('resultSub').textContent   = `Собрано ${score} согласиков! Уровень пройден!`;
-    localStorage.setItem('level3_done', '1');
+    if (window.Progress) {
+      const medal = elapsed < 30 ? '🥇' : (elapsed < 45 ? '🥈' : '🥉');
+      Progress.completeLevel(3, { time: elapsed, medal: medal, score: score });
+    }
   } else {
     document.getElementById('resultEmoji').textContent = score >= 70 ? '😔' : '💥';
     document.getElementById('resultTitle').textContent = 'Время вышло!';

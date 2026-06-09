@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Уровень 1 — Согласовано?</title>
   <link rel="stylesheet" href="style.css">
+  <script src="../progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     #resultEmoji {
@@ -91,9 +92,7 @@
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i], g = data[i+1], b = data[i+2];
-          // Белые и светло-серые пиксели — делаем прозрачным
           if (r > 210 && g > 210 && b > 210) {
-            // Полупрозрачность по близости к белому — плавный переход
             const brightness = Math.min(r, g, b);
             data[i+3] = Math.round((255 - brightness) * 1.4);
           }
@@ -106,7 +105,6 @@
     initGame();
 
     function goLevel2() {
-      localStorage.setItem('level1_done', '1');
       window.location.href = '../level-select.html?autoplay=2';
     }
 
