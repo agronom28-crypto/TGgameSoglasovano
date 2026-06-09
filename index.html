@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Согласовано?</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <script src="progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,23 +19,18 @@
       padding-bottom: max(60px, env(safe-area-inset-bottom, 20px));
       background: #0d1117;
     }
-
     #coverImg {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%;
       object-fit: cover; object-position: center top;
-      z-index: 0;
-      opacity: 0;
+      z-index: 0; opacity: 0;
       transition: opacity 0.4s ease;
     }
     #coverImg.loaded { opacity: 1; }
-
     #splash::before {
-      content: '';
-      position: absolute; inset: 0; z-index: 0;
+      content: ''; position: absolute; inset: 0; z-index: 0;
       background: linear-gradient(160deg, #1a2a4a 0%, #0d1117 50%, #1a1a2e 100%);
     }
-
     #loadingSpinner {
       position: absolute; top: 50%; left: 50%; z-index: 2;
       transform: translate(-50%, -50%);
@@ -46,17 +42,14 @@
     }
     @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
     #loadingSpinner.hidden { display: none; }
-
     @keyframes pulse {
-      0%   { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
-      50%  { transform: scale(1.08); box-shadow: 0 0 56px rgba(255,140,0,1),   0 8px 24px rgba(0,0,0,0.5); }
-      100% { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+      0%,100% { transform: scale(1);    box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5); }
+      50%      { transform: scale(1.08); box-shadow: 0 0 56px rgba(255,140,0,1),   0 8px 24px rgba(0,0,0,0.5); }
     }
     @keyframes glowRing {
       0%   { opacity: 0.6; transform: scale(1); }
       100% { opacity: 0;   transform: scale(1.7); }
     }
-
     #playBtn {
       position: relative; z-index: 1;
       padding: 18px 64px; font-size: 26px; font-weight: 900;
@@ -75,13 +68,74 @@
       animation: glowRing 1.6s ease-out infinite; pointer-events: none;
     }
     #playBtn:active { transform: scale(0.95) !important; animation: none; }
+
+    /* Экран ввода имени */
+    #nicknameScreen {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(13,17,23,0.97);
+      align-items: center; justify-content: center;
+      flex-direction: column;
+    }
+    #nicknameScreen.show { display: flex; }
+    #nicknameCard {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 24px;
+      padding: 36px 28px;
+      width: min(360px, 90vw);
+      text-align: center;
+    }
+    #nicknameCard .nn-emoji { font-size: 52px; margin-bottom: 12px; }
+    #nicknameCard .nn-title {
+      font-size: 22px; font-weight: 900; color: #FFD700;
+      margin-bottom: 8px; letter-spacing: 1px;
+    }
+    #nicknameCard .nn-sub {
+      font-size: 14px; color: #8b949e; margin-bottom: 24px; line-height: 1.5;
+    }
+    #nicknameInput {
+      width: 100%; padding: 14px 16px; font-size: 18px; font-weight: 700;
+      border-radius: 14px; border: 2px solid #30363d;
+      background: #0d1117; color: #fff; text-align: center;
+      outline: none; margin-bottom: 8px;
+      transition: border-color 0.2s;
+    }
+    #nicknameInput:focus { border-color: #FF8C00; }
+    #nicknameInput::placeholder { color: #484f58; font-weight: 400; }
+    #nicknameError {
+      font-size: 12px; color: #f85149; min-height: 18px; margin-bottom: 12px;
+    }
+    #nicknameConfirm {
+      width: 100%; padding: 15px; font-size: 18px; font-weight: 900;
+      letter-spacing: 2px; text-transform: uppercase;
+      background: linear-gradient(135deg, #FF6B00, #FFB300);
+      border: none; border-radius: 14px; color: #fff;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    #nicknameConfirm:active { opacity: 0.8; }
   </style>
 </head>
 <body>
+
+  <!-- Экран ввода никнейма -->
+  <div id="nicknameScreen">
+    <div id="nicknameCard">
+      <div class="nn-emoji">💼</div>
+      <div class="nn-title">Как тебя зовут?</div>
+      <div class="nn-sub">Выбери себе имя сотрудника.<br>Оно будет отображаться в рейтинге.</div>
+      <input id="nicknameInput" type="text" maxlength="20" placeholder="Например: Старший Менеджер" autocomplete="off"
+        oninput="document.getElementById('nicknameError').textContent=''"
+        onkeydown="if(event.key==='Enter') confirmNickname()">
+      <div id="nicknameError"></div>
+      <button id="nicknameConfirm" onclick="confirmNickname()">Начать ▶</button>
+    </div>
+  </div>
+
   <div id="splash">
     <div id="loadingSpinner"></div>
     <img id="coverImg" alt="Обложка" fetchpriority="high" decoding="async">
-    <button id="playBtn" onclick="window.location.href='level-select.html'">&#9654; PLAY</button>
+    <button id="playBtn" onclick="handlePlay()">▶ PLAY</button>
   </div>
 
   <script>
@@ -90,9 +144,9 @@
       Telegram.WebApp.disableVerticalSwipes?.();
     }
 
-    const img = document.getElementById('coverImg');
+    const img     = document.getElementById('coverImg');
     const spinner = document.getElementById('loadingSpinner');
-    const btn = document.getElementById('playBtn');
+    const btn     = document.getElementById('playBtn');
 
     img.onload = function() {
       spinner.classList.add('hidden');
@@ -103,8 +157,46 @@
       spinner.classList.add('hidden');
       btn.classList.add('visible');
     };
-
     img.src = 'Main.webp';
+
+    function handlePlay() {
+      // Проверяем наличие никнейма (ожидаем TG init)
+      setTimeout(() => {
+        Progress.getNickname(name => {
+          if (name) {
+            window.location.href = 'level-select.html';
+          } else {
+            // Подсказъем имя из Telegram если есть
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            if (tgUser?.first_name) {
+              document.getElementById('nicknameInput').value = tgUser.first_name;
+            }
+            document.getElementById('nicknameScreen').classList.add('show');
+            setTimeout(() => document.getElementById('nicknameInput').focus(), 100);
+          }
+        });
+      }, 300);
+    }
+
+    function confirmNickname() {
+      const input = document.getElementById('nicknameInput');
+      const name  = input.value.trim();
+      const err   = document.getElementById('nicknameError');
+      if (!name) {
+        err.textContent = 'Пожалуйста, введи имя';
+        input.focus(); return;
+      }
+      if (name.length < 2) {
+        err.textContent = 'Имя должно быть минимум 2 символа';
+        input.focus(); return;
+      }
+      const btn = document.getElementById('nicknameConfirm');
+      btn.textContent = 'Сохраняем...';
+      btn.disabled = true;
+      Progress.setNickname(name, () => {
+        window.location.href = 'level-select.html';
+      });
+    }
   </script>
 </body>
 </html>
