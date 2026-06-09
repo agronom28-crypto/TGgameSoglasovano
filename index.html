@@ -2,23 +2,42 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Согласовано?</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0d1117; overflow: hidden; font-family: sans-serif; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0d1117;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
 
     #splash {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-end;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      /* dvh — учитывает динамический viewport (Telegram WebView, iOS Safari) */
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      /* заполняем пространство под нозчом/вырезом на iPhone */
+      padding-bottom: max(60px, env(safe-area-inset-bottom, 20px));
     }
+
     #coverImg {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover; z-index: 0;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      z-index: 0;
     }
 
     @keyframes pulse {
@@ -32,18 +51,30 @@
     }
 
     #playBtn {
-      position: relative; z-index: 1; margin-bottom: 60px;
-      padding: 18px 64px; font-size: 26px; font-weight: 900;
-      letter-spacing: 4px; text-transform: uppercase; color: #fff;
+      position: relative;
+      z-index: 1;
+      padding: 18px 64px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #fff;
       background: linear-gradient(135deg, #FF6B00, #FFB300);
-      border: 3px solid rgba(255,255,255,0.5); border-radius: 50px;
+      border: 3px solid rgba(255,255,255,0.5);
+      border-radius: 50px;
       box-shadow: 0 0 32px rgba(255,140,0,0.7), 0 4px 16px rgba(0,0,0,0.5);
-      cursor: pointer; animation: pulse 1.6s ease-in-out infinite;
+      cursor: pointer;
+      animation: pulse 1.6s ease-in-out infinite;
+      /* ширина кнопки на мобильных */
+      width: min(340px, 80vw);
     }
     #playBtn::before {
-      content: ''; position: absolute; inset: -6px; border-radius: 50px;
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 50px;
       border: 3px solid rgba(255,180,0,0.8);
-      animation: glowRing 1.6s ease-out infinite; pointer-events: none;
+      animation: glowRing 1.6s ease-out infinite;
+      pointer-events: none;
     }
     #playBtn:active { transform: scale(0.95) !important; animation: none; }
   </style>
@@ -51,7 +82,15 @@
 <body>
   <div id="splash">
     <img src="Main.png" alt="Обложка" id="coverImg" fetchpriority="high">
-    <button id="playBtn" onclick="window.location.href='level-select.html'">▶ PLAY</button>
+    <button id="playBtn" onclick="window.location.href='level-select.html'">&#9654; PLAY</button>
   </div>
+
+  <script>
+    // Расширяем Telegram Mini App на весь экран
+    if (window.Telegram?.WebApp) {
+      Telegram.WebApp.expand();
+      Telegram.WebApp.disableVerticalSwipes?.();
+    }
+  </script>
 </body>
 </html>
