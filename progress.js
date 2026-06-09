@@ -13,8 +13,11 @@
  * }
  */
 
-const STORAGE_KEY = 'soglasovano_progress';
+const STORAGE_KEY  = 'soglasovano_progress';
+const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
+
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
+const tgUser  = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
 // ─── Примитивы чтения/записи ─────────────────────────────
 
@@ -42,6 +45,27 @@ function loadCloud(callback) {
   });
 }
 
+// ─── Отправка в аналитику ────────────────────────────────
+
+function sendAnalytics(levelN, result) {
+  try {
+    const userId   = tgUser?.id       || 'anonymous';
+    const username = tgUser?.username || tgUser?.first_name || 'anonymous';
+    fetch(ANALYTICS_URL + '/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        username,
+        level:    levelN,
+        time:     result.time     || 0,
+        distance: result.score    || 0,
+        medal:    result.medal    || '-',
+      }),
+    }).catch(() => {}); // тихо игнорируем сетевые ошибки
+  } catch(e) {}
+}
+
 // ─── Публичный API ─────────────────────────────────────
 
 /**
@@ -59,7 +83,7 @@ function loadProgress(callback) {
         merged.levels[n] = cloud.levels[n];
       }
     });
-    saveLocal(merged); // синхронизуем local
+    saveLocal(merged);
     callback(merged);
   });
 }
@@ -74,17 +98,19 @@ function completeLevel(levelN, result) {
   const prev = data.levels[levelN];
   // Сохраняем лучший результат
   data.levels[levelN] = {
-    done: true,
-    time: prev?.time ? Math.min(prev.time, result.time || 999) : (result.time || 0),
-    medal: result.medal || prev?.medal || '-',
-    score: result.score || prev?.score || 0,
-    date: new Date().toISOString().split('T')[0],
+    done:     true,
+    time:     prev?.time ? Math.min(prev.time, result.time || 999) : (result.time || 0),
+    medal:    result.medal || prev?.medal || '-',
+    score:    result.score || prev?.score || 0,
+    date:     new Date().toISOString().split('T')[0],
     attempts: (prev?.attempts || 0) + 1,
   };
   saveLocal(data);
   saveCloud(data);
   // Обратная совместимость со старым форматом
   localStorage.setItem(`level${levelN}_done`, '1');
+  // Отправляем в аналитику (всегда, даже при повторном прохождении)
+  sendAnalytics(levelN, result);
   return data;
 }
 
