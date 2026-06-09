@@ -40,8 +40,26 @@ body { background: #1a1a2e; overflow: hidden; font-family: sans-serif; }
 #playBtn:active { transform: scale(0.95) !important; animation: none; }
 
 /* ── ИГРА ── */
-#gameWrapper { width: 100vw; height: 100vh; }
-canvas { display: block; width: 100vw; height: 100vh; }
+#gameWrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+canvas {
+  display: block;
+  /* CSS-размер — 50% от экрана */
+  width: 200vw;
+  height: 200vh;
+  /* Смещаем влево-вверх чтобы начало было в левом верхнем углу */
+  transform-origin: top left;
+  transform: scale(0.5);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 #ui {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
   color: #fff; font-size: 20px;
