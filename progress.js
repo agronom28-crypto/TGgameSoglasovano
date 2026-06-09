@@ -4,6 +4,7 @@
 
 const STORAGE_KEY   = 'soglasovano_progress';
 const NICKNAME_KEY  = 'soglasovano_nickname';
+// Рабочий сервер на Railway (agronom28-crypto/soglasovano-analytics)
 const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
 
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
@@ -63,17 +64,16 @@ function loadCloud(callback) {
 // ─── Отправка аналитики ────────────────────────────────────
 function sendAnalytics(levelN, data) {
   try {
-    const user      = getTgUser();
-    const userId    = user?.id       || 'anonymous';
-    const tgName    = user?.username || user?.first_name || '';
-    const nickname  = loadNicknameLocal();
-    const username  = nickname || tgName || 'anonymous';
+    const user     = getTgUser();
+    const userId   = user?.id       || 'anonymous';
+    const tgName   = user?.username || user?.first_name || '';
+    const nickname = loadNicknameLocal();
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId,
-        username,
+        username: nickname || tgName || 'anonymous',
         nickname: nickname || '',
         level:    levelN,
         time:     data.time     || 0,
@@ -86,10 +86,12 @@ function sendAnalytics(levelN, data) {
 }
 
 // ─── Рейтинг (топ-5) ──────────────────────────────────────
+// Endpoint: GET /api/leaderboard?level=N&top=5
+// Ответ: { level, top: [{ rank, name, score, time }, ...] }
 function fetchLeaderboard(levelN, callback) {
-  fetch(`${ANALYTICS_URL}/leaderboard/${levelN}`)
+  fetch(`${ANALYTICS_URL}/api/leaderboard?level=${levelN}&top=5`)
     .then(r => r.json())
-    .then(data => callback(data.leaderboard || []))
+    .then(data => callback(data.top || []))
     .catch(() => callback([]));
 }
 
@@ -147,4 +149,5 @@ function getLevelStats(levelN, progressData) {
 window.Progress = {
   loadProgress, completeLevel, isLevelUnlocked, getLevelStats,
   sendAnalytics, getNickname, setNickname, fetchLeaderboard,
+  loadNicknameLocal, // нужен index.html уровней для подсветки своей строки
 };
