@@ -8,8 +8,13 @@
 const STORAGE_KEY   = 'soglasovano_progress';
 const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
 
+// tgCloud можно читать сразу — он не зависит от initData
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
-const tgUser  = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+// tgUser — читаем каждый раз заново, чтобы Telegram успел инициализироваться
+function getTgUser() {
+  return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+}
 
 // ─── Примитивы чтения/записи ───────────────────────────────
 
@@ -41,8 +46,10 @@ function loadCloud(callback) {
 
 function sendAnalytics(levelN, data) {
   try {
-    const userId   = tgUser?.id       || 'anonymous';
-    const username = tgUser?.username || tgUser?.first_name || 'anonymous';
+    // Читаем пользователя в момент отправки — Telegram уже точно инициализировался
+    const user     = getTgUser();
+    const userId   = user?.id       || 'anonymous';
+    const username = user?.username || user?.first_name || 'anonymous';
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,9 +68,6 @@ function sendAnalytics(levelN, data) {
 
 // ─── Публичный API ────────────────────────────────────────────
 
-/**
- * Загрузить прогресс (сначала Cloud, потом local)
- */
 function loadProgress(callback) {
   const local = loadLocal();
   loadCloud(cloud => {
@@ -79,12 +83,7 @@ function loadProgress(callback) {
   });
 }
 
-/**
- * Сохранить результат уровня (только при победе)
- * Читает актуальные данные из CloudStorage, чтобы не перезаписать другие уровни.
- */
 function completeLevel(levelN, result) {
-  // Сначала читаем актуальный состояние из Cloud (не из localStorage!)
   loadCloud(cloudData => {
     const base = cloudData || loadLocal();
     const prev = base.levels?.[levelN];
@@ -102,7 +101,6 @@ function completeLevel(levelN, result) {
     localStorage.setItem(`level${levelN}_done`, '1');
   });
 
-  // Аналитика отправляется независимо
   sendAnalytics(levelN, {
     time:     result.time,
     distance: result.score,
@@ -111,18 +109,12 @@ function completeLevel(levelN, result) {
   });
 }
 
-/**
- * Проверить открыт ли уровень
- */
 function isLevelUnlocked(levelN, progressData) {
   if (levelN === 1) return true;
   const prev = progressData?.levels?.[levelN - 1];
   return !!prev?.done;
 }
 
-/**
- * Получить статистику уровня
- */
 function getLevelStats(levelN, progressData) {
   return progressData?.levels?.[levelN] || null;
 }
