@@ -41,11 +41,29 @@
       0%,100% { transform: scale(1);    box-shadow: 0 0 24px rgba(255,140,0,0.6); }
       50%      { transform: scale(1.1); box-shadow: 0 0 44px rgba(255,140,0,0.9); }
     }
+
+    /* Картинка уровня — img заполняет всю рамку целиком */
     .card-bg {
-      background: linear-gradient(135deg,#1a237e 0%,#0d1b3e 100%);
-      transition: opacity 0.3s;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+      transition: filter 0.3s, opacity 0.4s;
+      opacity: 0;
+      background: linear-gradient(135deg, #1a237e 0%, #0d1b3e 100%);
     }
-    .card-bg.img-loading {
+    .card-bg.loaded { opacity: 1; }
+    .card.locked .card-bg {
+      filter: blur(6px) brightness(0.45) grayscale(0.6);
+      transform: scale(1.08);
+    }
+    /* Плейсхолдер пока грузится */
+    .card-placeholder {
+      position: absolute;
+      inset: 0;
       background: linear-gradient(90deg, #1a2a4a 25%, #243450 50%, #1a2a4a 75%);
       background-size: 200% 100%;
       animation: shimmer 1.2s infinite;
@@ -146,36 +164,31 @@
 
     function buildGrid() {
       const grid = document.getElementById('grid');
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          const bg = entry.target;
-          const src = bg.dataset.src;
-          if (!src) return;
-          observer.unobserve(bg);
-          bg.classList.add('img-loading');
-          const tmpImg = new Image();
-          tmpImg.onload = () => {
-            bg.style.backgroundImage = `url('${src}')`;
-            bg.classList.remove('img-loading');
-          };
-          tmpImg.onerror = () => bg.classList.remove('img-loading');
-          tmpImg.src = src;
-        });
-      }, { rootMargin: '100px' });
 
       LEVELS.forEach(lvl => {
         const unlocked = isUnlocked(lvl.n);
         const card = document.createElement('div');
         card.className = 'card' + (unlocked ? ' unlocked' : ' locked');
 
-        const bg = document.createElement('div');
-        bg.className = 'card-bg';
+        // Плейсхолдер пока грузится картинка
+        const placeholder = document.createElement('div');
+        placeholder.className = 'card-placeholder';
+        card.appendChild(placeholder);
+
+        // Картинка через <img> — полностью помещается в рамку
         if (lvl.img) {
-          bg.dataset.src = lvl.img;
-          observer.observe(bg);
+          const img = document.createElement('img');
+          img.className = 'card-bg';
+          img.alt = lvl.title;
+          img.loading = 'lazy';
+          img.onload = () => {
+            img.classList.add('loaded');
+            placeholder.style.display = 'none';
+          };
+          img.onerror = () => { placeholder.style.display = 'none'; };
+          img.src = lvl.img;
+          card.appendChild(img);
         }
-        card.appendChild(bg);
 
         if (!unlocked) {
           const ov = document.createElement('div');
