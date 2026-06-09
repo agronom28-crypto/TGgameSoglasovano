@@ -179,16 +179,11 @@ function drawFlash() {
 }
 
 // ─── ФИНИШНАЯ РАЗМЕТКА (ОФИС + ЛЕНТА)
-// Позиция финиша по шкале дистанции:
-// remaining = (TOTAL_DIST - state.distance) км до финиша
-// при remaining=2 — финиш стоит на расстоянии 2 экрана
 function getFinishX() {
   const remaining  = TOTAL_DIST - state.distance;
-  // Сколько пикселей занимает один км за секунду
   const pxPerSec   = (canvas.width / 2.2) * (state.boost ? 2.5 : 1);
   const secPerKm   = 1 / BASE_SPEED;
   const pxPerKm    = pxPerSec * secPerKm;
-  // Финиш слева от игрока (PLAYER_X) плюс remaining км
   return PLAYER_X + remaining * pxPerKm;
 }
 
@@ -200,26 +195,21 @@ function drawFinishLine() {
   const GY = GROUND_Y;
   ctx.save();
 
-  // ── ТЕНЬ здания
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.beginPath();
   ctx.ellipse(fx + 10, GY - 3, 140, 14, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // ── ОФИСНОЕ ЗДАНИЕ
   const bW = 280, bH = 240;
-  const bX = fx - 40;          // смещено левее чтобы центр прохода был справа
+  const bX = fx - 40;
   const bY = GY - bH;
 
-  // Фундамент / цоколь
   ctx.fillStyle = '#455a64';
   ctx.fillRect(bX - 6, bY - 8, bW + 12, 12);
 
-  // Стены — светло-серый бетон
   ctx.fillStyle = '#cfd8dc';
   ctx.fillRect(bX, bY, bW, bH);
 
-  // Окна (4 колонки x 5 рядов)
   const cols = 4, rows = 5;
   const winW = Math.floor((bW - 24) / cols) - 6;
   const winH = Math.floor((bH - 44) / rows) - 8;
@@ -232,24 +222,20 @@ function drawFinishLine() {
       ctx.fillRect(wx, wy, winW, winH);
       ctx.strokeStyle = '#78909c'; ctx.lineWidth = 1;
       ctx.strokeRect(wx, wy, winW, winH);
-      // Горизонтальная перемычка
       ctx.strokeStyle = 'rgba(120,144,156,0.6)';
       ctx.beginPath(); ctx.moveTo(wx, wy + winH/2); ctx.lineTo(wx+winW, wy+winH/2); ctx.stroke();
     }
   }
 
-  // Вертикальные пилястры по углам
   ctx.fillStyle = '#546e7a';
   ctx.fillRect(bX - 4, bY - 4, 10, bH + 8);
   ctx.fillRect(bX + bW - 6, bY - 4, 10, bH + 8);
 
-  // Дверь
   ctx.fillStyle = '#37474f';
   ctx.fillRect(bX + bW/2 - 18, GY - 60, 36, 60);
-  ctx.fillStyle = '#ffd54f'; // ручка
+  ctx.fillStyle = '#ffd54f';
   ctx.beginPath(); ctx.arc(bX + bW/2 + 10, GY - 30, 4, 0, Math.PI*2); ctx.fill();
 
-  // Вывеска GreenBank
   const signW = 160, signH = 32;
   const signX = bX + bW/2 - signW/2;
   const signY = bY - signH - 12;
@@ -267,7 +253,6 @@ function drawFinishLine() {
   ctx.font = 'bold 13px sans-serif';
   ctx.fillText('ГОЛОВНОЙ ОФИС', bX + bW/2, signY + 26);
 
-  // ── ДВЕ СТОЙКИ ФИНИШНОЙ ЛЕНТЫ
   const poleH = Math.round(SPRITE_H * 1.35);
   const poleX1 = fx;
   const poleX2 = fx + 80;
@@ -275,7 +260,6 @@ function drawFinishLine() {
   ctx.fillRect(poleX1 - 4, GY - poleH, 7, poleH);
   ctx.fillRect(poleX2 - 4, GY - poleH, 7, poleH);
 
-  // Клеткатая лента
   const tapeY = GY - Math.round(SPRITE_H * 0.82);
   const tapeW = poleX2 - poleX1;
   const sqW   = 12;
@@ -287,7 +271,6 @@ function drawFinishLine() {
   ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5;
   ctx.strokeRect(poleX1, tapeY, tapeW, 14);
 
-  // Надпись на земле
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'center';
@@ -315,7 +298,8 @@ function initGame() {
   ctx=canvas.getContext('2d');
   canvas.width=window.innerWidth;
   canvas.height=window.innerHeight;
-  GROUND_Y=Math.round(canvas.height*0.65);
+  // 0.78 даёт больше неба и меньше земли — оптимально для мобильных экранов
+  GROUND_Y=Math.round(canvas.height*0.78);
   PLAYER_X=Math.round(canvas.width*0.12);
   dustParticles=[];burstParticles=[];
   flash={active:false,life:0};shake={x:0,y:0,life:0};
@@ -431,7 +415,6 @@ function update(dt) {
   state.obstacles.forEach(o=>o.x-=moveSpeed*dt);
   state.boosts.forEach(b=>b.x-=moveSpeed*dt);
   const now=Date.now();
-  // Не спавним препятствия после 8.5 км — даём игроку увидеть финиш
   if (state.distance < 8.5) {
     if (now-state.lastObstacleTime>1600){spawnObstacle();state.lastObstacleTime=now;}
     if (now-state.lastBoostTime>4000){spawnBoost();state.lastBoostTime=now;}
@@ -463,9 +446,9 @@ function draw() {
   ctx.fillStyle=rs;ctx.fillRect(0,GROUND_Y-10,canvas.width,20);
   drawBoosts();
   drawObstacles();
-  drawFinishLine();    // офис + лента — за персонажем
+  drawFinishLine();
   drawDust();
-  drawCharacter();     // персонаж поверх
+  drawCharacter();
   if (state.timeLeft>55){
     ctx.fillStyle='rgba(0,0,0,0.55)';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
     ctx.fillText('↑ прыжок   ↓ присесть',canvas.width/2,GROUND_Y-160);
