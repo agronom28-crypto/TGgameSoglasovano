@@ -528,41 +528,55 @@ function getMedal(reason, score, elapsed) {
   if (score>=4) return {icon:'💪',label:'Неплохо — ещё раз!'};
   return {icon:'😅',label:'Попробуй ещё раз'};
 }
+
 function endGame(reason) {
-  state.running=false;
-  const elapsed=parseFloat((GAME_DURATION-state.timeLeft).toFixed(1));
-  const score=parseFloat(state.distance.toFixed(2));
-  const medal=getMedal(reason,score,elapsed);
+  if (!state.running) return; // защита от двойного вызова
+  state.running = false;
+  const elapsed = parseFloat((GAME_DURATION - state.timeLeft).toFixed(1));
+  const score   = parseFloat(state.distance.toFixed(2));
+  const medal   = getMedal(reason, score, elapsed);
+
   if (window.Telegram?.WebApp)
-    Telegram.WebApp.sendData(JSON.stringify({score,time:elapsed,reason}));
-  if (reason==='finish') {
-    // Сохраняем прогресс через progress.js
-    if (window.Progress) {
-      Progress.completeLevel(1, { time: elapsed, medal: medal.icon, score: score });
-    }
+    Telegram.WebApp.sendData(JSON.stringify({ score, time: elapsed, reason }));
+
+  // Аналитика — при ЛЮБОМ исходе
+  if (window.Progress) {
+    Progress.sendAnalytics(1, {
+      time:     elapsed,
+      distance: score,
+      medal:    reason === 'finish' ? medal.icon : '-',
+      result:   reason, // 'finish' | 'hit' | 'timeout'
+    });
+  }
+
+  if (reason === 'finish') {
+    if (window.Progress)
+      Progress.completeLevel(1, { time: elapsed, medal: medal.icon, score });
     playFinishCutscene(elapsed, score, medal);
     return;
   }
-  if (reason==='timeout') {
-    document.getElementById('resultEmoji').textContent='⏰';
-    document.getElementById('resultTitle').textContent='Время вышло!';
-    document.getElementById('resultTitle').style.color='#aaa';
+
+  // Экран проигрыша
+  if (reason === 'timeout') {
+    document.getElementById('resultEmoji').textContent = '⏰';
+    document.getElementById('resultTitle').textContent = 'Время вышло!';
+    document.getElementById('resultTitle').style.color = '#aaa';
   } else {
-    document.getElementById('resultEmoji').textContent='💥';
-    document.getElementById('resultTitle').textContent='Game Over';
-    document.getElementById('resultTitle').style.color='#ff5252';
+    document.getElementById('resultEmoji').textContent = '💥';
+    document.getElementById('resultTitle').textContent = 'Game Over';
+    document.getElementById('resultTitle').style.color = '#ff5252';
   }
-  document.getElementById('statScore').textContent=`${score} км`;
-  document.getElementById('statTime').textContent=`${elapsed}с`;
-  document.getElementById('medal').textContent=medal.icon;
-  document.getElementById('medalLabel').textContent=medal.label;
+  document.getElementById('statScore').textContent  = `${score} км`;
+  document.getElementById('statTime').textContent   = `${elapsed}с`;
+  document.getElementById('medal').textContent      = medal.icon;
+  document.getElementById('medalLabel').textContent = medal.label;
   document.getElementById('result').classList.add('show');
 }
 
 function loop() {
-  const now=Date.now();
-  const dt=Math.min((now-state.lastFrame)/1000,0.05);
-  state.lastFrame=now;
-  update(dt);draw();
+  const now = Date.now();
+  const dt  = Math.min((now - state.lastFrame) / 1000, 0.05);
+  state.lastFrame = now;
+  update(dt); draw();
   requestAnimationFrame(loop);
 }

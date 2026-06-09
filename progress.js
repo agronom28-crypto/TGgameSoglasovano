@@ -3,23 +3,15 @@
  *
  * Хранит данные в Telegram CloudStorage (привязано к аккаунту)
  * Fallback — localStorage (если открыто в браузере без Telegram)
- *
- * Структура объекта progress:
- * {
- *   levels: {
- *     1: { done: true, time: 42.3, medal: '🥇', date: '2026-06-09' },
- *     2: { done: true, time: 88.1, medal: '🥈', date: '2026-06-09' },
- *   }
- * }
  */
 
-const STORAGE_KEY  = 'soglasovano_progress';
+const STORAGE_KEY   = 'soglasovano_progress';
 const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
 
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
 const tgUser  = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
-// ─── Примитивы чтения/записи ─────────────────────────────
+// ─── Примитивы чтения/записи ─────────────────────────────────
 
 function saveLocal(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
@@ -45,9 +37,16 @@ function loadCloud(callback) {
   });
 }
 
-// ─── Отправка в аналитику ────────────────────────────────
+// ─── Отправка в аналитику ─────────────────────────────────────
 
-function sendAnalytics(levelN, result) {
+/**
+ * Отправляет событие на сервер аналитики.
+ * Вызывается при ЛЮБОМ исходе уровня (победа, проигрыш, таймаут).
+ * @param {number} levelN
+ * @param {object} data - { time, distance, medal, result }
+ *   result: 'finish' | 'hit' | 'timeout' | 'fail' | string
+ */
+function sendAnalytics(levelN, data) {
   try {
     const userId   = tgUser?.id       || 'anonymous';
     const username = tgUser?.username || tgUser?.first_name || 'anonymous';
@@ -58,15 +57,16 @@ function sendAnalytics(levelN, result) {
         userId,
         username,
         level:    levelN,
-        time:     result.time     || 0,
-        distance: result.score    || 0,
-        medal:    result.medal    || '-',
+        time:     data.time     || 0,
+        distance: data.distance || data.score || 0,
+        medal:    data.medal    || '-',
+        result:   data.result   || 'unknown',
       }),
-    }).catch(() => {}); // тихо игнорируем сетевые ошибки
+    }).catch(() => {});
   } catch(e) {}
 }
 
-// ─── Публичный API ─────────────────────────────────────
+// ─── Публичный API ────────────────────────────────────────────
 
 /**
  * Загрузить прогресс (сначала Cloud, потом local)
@@ -76,7 +76,6 @@ function loadProgress(callback) {
   const local = loadLocal();
   loadCloud(cloud => {
     if (!cloud) { callback(local); return; }
-    // Мержим: берём лучшее из обоих источников
     const merged = { levels: { ...local.levels } };
     Object.keys(cloud.levels || {}).forEach(n => {
       if (!merged.levels[n] || cloud.levels[n].done) {
@@ -89,14 +88,13 @@ function loadProgress(callback) {
 }
 
 /**
- * Сохранить результат уровня
- * @param {number} levelN - номер уровня
+ * Сохранить результат уровня (только при победе)
+ * @param {number} levelN
  * @param {object} result - { time, medal, score }
  */
 function completeLevel(levelN, result) {
   const data = loadLocal();
   const prev = data.levels[levelN];
-  // Сохраняем лучший результат
   data.levels[levelN] = {
     done:     true,
     time:     prev?.time ? Math.min(prev.time, result.time || 999) : (result.time || 0),
@@ -107,15 +105,19 @@ function completeLevel(levelN, result) {
   };
   saveLocal(data);
   saveCloud(data);
-  // Обратная совместимость со старым форматом
   localStorage.setItem(`level${levelN}_done`, '1');
-  // Отправляем в аналитику (всегда, даже при повторном прохождении)
-  sendAnalytics(levelN, result);
+  // При победе тоже отправляем аналитику
+  sendAnalytics(levelN, {
+    time:     result.time,
+    distance: result.score,
+    medal:    result.medal,
+    result:   'finish',
+  });
   return data;
 }
 
 /**
- * Проверить открыт ли уровень (синхронно, без обновления UI)
+ * Проверить открыт ли уровень
  */
 function isLevelUnlocked(levelN, progressData) {
   if (levelN === 1) return true;
@@ -130,4 +132,4 @@ function getLevelStats(levelN, progressData) {
   return progressData?.levels?.[levelN] || null;
 }
 
-window.Progress = { loadProgress, completeLevel, isLevelUnlocked, getLevelStats };
+window.Progress = { loadProgress, completeLevel, isLevelUnlocked, getLevelStats, sendAnalytics };
