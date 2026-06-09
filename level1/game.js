@@ -178,7 +178,7 @@ function drawFlash() {
   });
 }
 
-// ─── ФИНИШНАЯ РАЗМЕТКА (ОФИС + ЛЕНТА)
+// ─── ФИНИШНАЯ РАЗМЕТКА
 function getFinishX() {
   const remaining  = TOTAL_DIST - state.distance;
   const pxPerSec   = (canvas.width / 2.2) * (state.boost ? 2.5 : 1);
@@ -191,25 +191,19 @@ function drawFinishLine() {
   if (state.distance < 8) return;
   const fx = getFinishX();
   if (fx < -300 || fx > canvas.width + 400) return;
-
   const GY = GROUND_Y;
   ctx.save();
-
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.beginPath();
   ctx.ellipse(fx + 10, GY - 3, 140, 14, 0, 0, Math.PI*2);
   ctx.fill();
-
   const bW = 280, bH = 240;
   const bX = fx - 40;
   const bY = GY - bH;
-
   ctx.fillStyle = '#455a64';
   ctx.fillRect(bX - 6, bY - 8, bW + 12, 12);
-
   ctx.fillStyle = '#cfd8dc';
   ctx.fillRect(bX, bY, bW, bH);
-
   const cols = 4, rows = 5;
   const winW = Math.floor((bW - 24) / cols) - 6;
   const winH = Math.floor((bH - 44) / rows) - 8;
@@ -226,56 +220,38 @@ function drawFinishLine() {
       ctx.beginPath(); ctx.moveTo(wx, wy + winH/2); ctx.lineTo(wx+winW, wy+winH/2); ctx.stroke();
     }
   }
-
   ctx.fillStyle = '#546e7a';
   ctx.fillRect(bX - 4, bY - 4, 10, bH + 8);
   ctx.fillRect(bX + bW - 6, bY - 4, 10, bH + 8);
-
   ctx.fillStyle = '#37474f';
   ctx.fillRect(bX + bW/2 - 18, GY - 60, 36, 60);
   ctx.fillStyle = '#ffd54f';
   ctx.beginPath(); ctx.arc(bX + bW/2 + 10, GY - 30, 4, 0, Math.PI*2); ctx.fill();
-
   const signW = 160, signH = 32;
   const signX = bX + bW/2 - signW/2;
   const signY = bY - signH - 12;
   ctx.fillStyle = '#1b5e20';
-  if (ctx.roundRect) {
-    ctx.beginPath(); ctx.roundRect(signX, signY, signW, signH, 8); ctx.fill();
-  } else {
-    ctx.fillRect(signX, signY, signW, signH);
-  }
-  ctx.fillStyle = '#a5d6a7';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'center';
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(signX, signY, signW, signH, 8); ctx.fill(); }
+  else { ctx.fillRect(signX, signY, signW, signH); }
+  ctx.fillStyle = '#a5d6a7'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('GREENBANK', bX + bW/2, signY + 11);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif';
   ctx.fillText('ГОЛОВНОЙ ОФИС', bX + bW/2, signY + 26);
-
   const poleH = Math.round(SPRITE_H * 1.35);
-  const poleX1 = fx;
-  const poleX2 = fx + 80;
+  const poleX1 = fx, poleX2 = fx + 80;
   ctx.fillStyle = '#e53935';
   ctx.fillRect(poleX1 - 4, GY - poleH, 7, poleH);
   ctx.fillRect(poleX2 - 4, GY - poleH, 7, poleH);
-
   const tapeY = GY - Math.round(SPRITE_H * 0.82);
-  const tapeW = poleX2 - poleX1;
-  const sqW   = 12;
-  const nSq   = Math.ceil(tapeW / sqW);
+  const tapeW = poleX2 - poleX1, sqW = 12, nSq = Math.ceil(tapeW / sqW);
   for (let i = 0; i < nSq; i++) {
     ctx.fillStyle = i % 2 === 0 ? '#e53935' : '#ffffff';
     ctx.fillRect(poleX1 + i * sqW, tapeY, sqW, 14);
   }
   ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5;
   ctx.strokeRect(poleX1, tapeY, tapeW, 14);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 16px sans-serif';
-  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('🏁  10 км  🏁', poleX1 + tapeW/2, GY + 20);
-
   ctx.textAlign = 'left';
   ctx.restore();
 }
@@ -293,40 +269,44 @@ function boostBox(b){return{x1:b.x,x2:b.x+44,y1:GROUND_Y-170,y2:GROUND_Y-120};}
 function overlaps(a,b){return a.x1<b.x2&&a.x2>b.x1&&a.y1<b.y2&&a.y2>b.y1;}
 
 // ─── INIT
+// Canvas рендерится в 2× размер экрана, потом CSS scale(0.5) уменьшает до 100% экрана
+const SCALE = 2;
 function initGame() {
-  canvas=document.getElementById('gameCanvas');
-  ctx=canvas.getContext('2d');
-  canvas.width=window.innerWidth;
-  canvas.height=window.innerHeight;
-  // 0.78 даёт больше неба и меньше земли — оптимально для мобильных экранов
-  GROUND_Y=Math.round(canvas.height*0.78);
-  PLAYER_X=Math.round(canvas.width*0.12);
-  dustParticles=[];burstParticles=[];
-  flash={active:false,life:0};shake={x:0,y:0,life:0};
+  canvas = document.getElementById('gameCanvas');
+  ctx = canvas.getContext('2d');
+  // Размер canvas в 2× пикселей, CSS сжимает до 50% (scale 0.5)
+  canvas.width  = window.innerWidth  * SCALE;
+  canvas.height = window.innerHeight * SCALE;
+  GROUND_Y = Math.round(canvas.height * 0.78);
+  PLAYER_X = Math.round(canvas.width  * 0.12);
+  dustParticles = []; burstParticles = [];
+  flash = {active:false,life:0}; shake = {x:0,y:0,life:0};
   initParallax();
-  state={
-    y:GROUND_Y,vy:0,isJumping:false,isDucking:false,
-    boost:false,boostTimer:0,distance:0,timeLeft:GAME_DURATION,running:true,
-    obstacles:[],boosts:[],lastObstacleTime:0,lastBoostTime:0,
-    lastFrame:Date.now(),animTime:0,frame:0,
+  state = {
+    y:GROUND_Y, vy:0, isJumping:false, isDucking:false,
+    boost:false, boostTimer:0, distance:0, timeLeft:GAME_DURATION, running:true,
+    obstacles:[], boosts:[], lastObstacleTime:0, lastBoostTime:0,
+    lastFrame:Date.now(), animTime:0, frame:0,
   };
   bindControls();
-  loadAssets(()=>loop());
+  loadAssets(() => loop());
 }
 
 // ─── УПРАВЛЕНИЕ
-let touchStartY=0;
+// Touch-координаты множим на SCALE, так как canvas внутренний размер в 2× больше
+let touchStartY = 0;
 function bindControls() {
-  const doJump=()=>{if(!state.isJumping){state.vy=-15;state.isJumping=true;}};
-  const doDuck=()=>{if(!state.isDucking){state.isDucking=true;setTimeout(()=>{state.isDucking=false;},500);}};
-  canvas.addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY;e.preventDefault();},{passive:false});
-  canvas.addEventListener('touchend',e=>{
-    const dy=e.changedTouches[0].clientY-touchStartY;
-    if(dy<-25)doJump(); if(dy>25)doDuck();
+  const doJump = () => { if (!state.isJumping) { state.vy = -15; state.isJumping = true; } };
+  const doDuck = () => { if (!state.isDucking) { state.isDucking = true; setTimeout(() => { state.isDucking = false; }, 500); } };
+  canvas.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY * SCALE; e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY * SCALE - touchStartY;
+    if (dy < -25 * SCALE) doJump();
+    if (dy >  25 * SCALE) doDuck();
   });
-  document.addEventListener('keydown',e=>{
-    if(e.key==='ArrowUp'||e.key===' '){e.preventDefault();doJump();}
-    if(e.key==='ArrowDown'||e.key==='s'){e.preventDefault();doDuck();}
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); doJump(); }
+    if (e.key === 'ArrowDown' || e.key === 's') { e.preventDefault(); doDuck(); }
   });
 }
 
@@ -478,9 +458,7 @@ function playFinishCutscene(elapsed, score, medal) {
   const video = document.getElementById('finishVideo');
   video.currentTime = 0;
   const playPromise = video.play();
-  if (playPromise !== undefined) {
-    playPromise.catch(() => showFinishResult());
-  }
+  if (playPromise !== undefined) { playPromise.catch(() => showFinishResult()); }
   video.onended = () => showFinishResult();
 }
 
@@ -503,10 +481,7 @@ function endGame(reason) {
   const medal=getMedal(reason,score,elapsed);
   if (window.Telegram?.WebApp)
     Telegram.WebApp.sendData(JSON.stringify({score,time:elapsed,reason}));
-  if (reason==='finish') {
-    playFinishCutscene(elapsed, score, medal);
-    return;
-  }
+  if (reason==='finish') { playFinishCutscene(elapsed, score, medal); return; }
   if (reason==='timeout') {
     document.getElementById('resultEmoji').textContent='⏰';
     document.getElementById('resultTitle').textContent='Время вышло!';
