@@ -2,9 +2,9 @@
  * progress.js — единый модуль прогресса игрока
  */
 
-const STORAGE_KEY     = 'soglasovano_progress';
-const NICKNAME_KEY    = 'soglasovano_nickname';
-const ANALYTICS_URL   = 'https://soglasovano-analytics-production.up.railway.app';
+const STORAGE_KEY   = 'soglasovano_progress';
+const NICKNAME_KEY  = 'soglasovano_nickname';
+const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
 
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
 
@@ -12,7 +12,7 @@ function getTgUser() {
   return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
 }
 
-// ─── Никнейм ────────────────────────────────────────────────────
+// ─── Никнейм ──────────────────────────────────────────────
 function saveNicknameLocal(name) {
   try { localStorage.setItem(NICKNAME_KEY, name); } catch(e) {}
 }
@@ -20,30 +20,25 @@ function loadNicknameLocal() {
   try { return localStorage.getItem(NICKNAME_KEY) || null; } catch(e) { return null; }
 }
 function saveNicknameCloud(name, cb) {
-  if (!tgCloud) { if(cb) cb(); return; }
-  tgCloud.setItem(NICKNAME_KEY, name, () => { if(cb) cb(); });
+  if (!tgCloud) { if (cb) cb(); return; }
+  tgCloud.setItem(NICKNAME_KEY, name, () => { if (cb) cb(); });
 }
 function loadNicknameCloud(callback) {
   if (!tgCloud) { callback(null); return; }
   tgCloud.getItem(NICKNAME_KEY, (err, value) => callback(err || !value ? null : value));
 }
-
-// Получить никнейм: Cloud → local → null
 function getNickname(callback) {
   loadNicknameCloud(cloud => {
     if (cloud) { saveNicknameLocal(cloud); callback(cloud); return; }
-    const local = loadNicknameLocal();
-    callback(local);
+    callback(loadNicknameLocal());
   });
 }
-
-// Сохранить никнейм
 function setNickname(name, cb) {
   saveNicknameLocal(name);
   saveNicknameCloud(name, cb);
 }
 
-// ─── Примитивы хранения ──────────────────────────────────────────
+// ─── Примитивы хранения ────────────────────────────────────
 function saveLocal(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
 }
@@ -65,14 +60,13 @@ function loadCloud(callback) {
   });
 }
 
-// ─── Отправка аналитики ────────────────────────────────────────
+// ─── Отправка аналитики ────────────────────────────────────
 function sendAnalytics(levelN, data) {
   try {
     const user      = getTgUser();
-    const userId    = user?.id || 'anonymous';
+    const userId    = user?.id       || 'anonymous';
     const tgName    = user?.username || user?.first_name || '';
     const nickname  = loadNicknameLocal();
-    // Приоритет: никнейм игрока > Telegram-имя > anonymous
     const username  = nickname || tgName || 'anonymous';
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
@@ -91,7 +85,15 @@ function sendAnalytics(levelN, data) {
   } catch(e) {}
 }
 
-// ─── Публичный API ─────────────────────────────────────────────────
+// ─── Рейтинг (топ-5) ──────────────────────────────────────
+function fetchLeaderboard(levelN, callback) {
+  fetch(`${ANALYTICS_URL}/leaderboard/${levelN}`)
+    .then(r => r.json())
+    .then(data => callback(data.leaderboard || []))
+    .catch(() => callback([]));
+}
+
+// ─── Публичный API ─────────────────────────────────────────
 function loadProgress(callback) {
   const local = loadLocal();
   loadCloud(cloud => {
@@ -143,6 +145,6 @@ function getLevelStats(levelN, progressData) {
 }
 
 window.Progress = {
-  loadProgress, completeLevel, isLevelUnlocked, getLevelStats, sendAnalytics,
-  getNickname, setNickname,
+  loadProgress, completeLevel, isLevelUnlocked, getLevelStats,
+  sendAnalytics, getNickname, setNickname, fetchLeaderboard,
 };

@@ -15,18 +15,18 @@
     }
     button { background: #4CAF50; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background: #43a047; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #1e2130; color: #4CAF50; padding: 10px 12px; text-align: left; }
-    td { padding: 9px 12px; border-bottom: 1px solid #1e2130; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #1e2130; color: #4CAF50; padding: 10px 8px; text-align: left; white-space: nowrap; }
+    td { padding: 8px 8px; border-bottom: 1px solid #1e2130; }
     tr:hover td { background: #1a1f2e; }
-    .medal-🥇 { color: #FFD700; }
-    .medal-🥈 { color: #C0C0C0; }
-    .medal-🥉 { color: #CD7F32; }
+    .medal-🥇 { color: #FFD700; } .medal-🥈 { color: #C0C0C0; } .medal-🥉 { color: #CD7F32; }
     #stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
     .stat { background: #1e2130; padding: 14px 20px; border-radius: 10px; }
     .stat .val { font-size: 28px; font-weight: bold; color: #4CAF50; }
     .stat .lbl { font-size: 12px; color: #888; }
     #status { margin-bottom: 12px; color: #888; }
+    .tg-id { color: #58a6ff; font-size: 11px; }
+    .nickname { font-weight: bold; color: #FFD700; }
   </style>
 </head>
 <body>
@@ -42,7 +42,7 @@
 
   <div id="stats" style="display:none">
     <div class="stat"><div class="val" id="sTotal">0</div><div class="lbl">Всего игр</div></div>
-    <div class="stat"><div class="val" id="sPlayers">0</div><div class="lbl">Игроков</div></div>
+    <div class="stat"><div class="val" id="sPlayers">0</div><div class="lbl">Уникальных игроков</div></div>
     <div class="stat"><div class="val" id="sBest">—</div><div class="lbl">Лучшее время</div></div>
     <div class="stat"><div class="val" id="sGold">0</div><div class="lbl">🥇 Золото</div></div>
   </div>
@@ -50,8 +50,16 @@
   <table id="table" style="display:none">
     <thead>
       <tr>
-        <th>#</th><th>Дата</th><th>Игрок</th><th>Уровень</th>
-        <th>Время</th><th>Дистанция</th><th>Медаль</th>
+        <th>#</th>
+        <th>Дата</th>
+        <th>Telegram ID</th>
+        <th>TG-имя</th>
+        <th>Никнейм игрока</th>
+        <th>Уровень</th>
+        <th>Время</th>
+        <th>Дист/Очки</th>
+        <th>Медаль</th>
+        <th>Итог</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -59,7 +67,7 @@
 
   <script>
     async function load() {
-      const url = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      const url  = document.getElementById('apiUrl').value.replace(/\/$/, '');
       const pass = document.getElementById('pass').value;
       document.getElementById('status').textContent = '⏳ Загружаю...';
       try {
@@ -70,8 +78,10 @@
           document.getElementById('status').textContent = '📭 Данных пока нет';
           return;
         }
-        renderTable(rows.slice(1)); // пропускаем заголовок
-        document.getElementById('status').textContent = `✅ Загружено ${rows.length - 1} записей`;
+        // Пропускаем строку-заголовок если есть
+        const data = rows[0]?.[0] === 'Дата' ? rows.slice(1) : rows;
+        renderTable(data);
+        document.getElementById('status').textContent = `✅ Загружено ${data.length} записей`;
       } catch(e) {
         document.getElementById('status').textContent = '❌ Ошибка: ' + e.message;
       }
@@ -80,28 +90,43 @@
     function renderTable(rows) {
       const tbody = document.getElementById('tbody');
       tbody.innerHTML = '';
-      let bestTime = Infinity, gold = 0, players = new Set();
+      let bestTime = Infinity, gold = 0;
+      const players = new Set();
 
-      rows.forEach((r, i) => {
-        const [date, uid, name, level, time, dist, medal] = r;
-        players.add(uid);
+      // Сортируем по дате убывания (новые сверху)
+      const sorted = [...rows].reverse();
+
+      sorted.forEach((r, i) => {
+        // A=дата B=telegramId C=tgName D=nickname E=level F=time G=distance H=medal I=result
+        const [date, telegramId, tgName, nickname, level, time, dist, medal, result] = r;
+        players.add(telegramId);
         const t = parseFloat(time);
         if (t && t < bestTime) bestTime = t;
         if (medal === '🥇') gold++;
 
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${i+1}</td><td>${date}</td><td>${name}</td><td>${level}</td>
-          <td>${time}с</td><td>${dist} км</td><td class="medal-${medal}">${medal}</td>`;
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td style="color:#666;font-size:11px">${date || ''}</td>
+          <td class="tg-id">${telegramId || '—'}</td>
+          <td style="color:#aaa">${tgName || '—'}</td>
+          <td class="nickname">${nickname || '—'}</td>
+          <td>${level || '—'}</td>
+          <td>${time ? time+'с' : '—'}</td>
+          <td>${dist || '—'}</td>
+          <td class="medal-${medal}">${medal || '—'}</td>
+          <td style="color:#888;font-size:11px">${result || '—'}</td>
+        `;
         tbody.appendChild(tr);
       });
 
-      document.getElementById('sTotal').textContent = rows.length;
+      document.getElementById('sTotal').textContent   = rows.length;
       document.getElementById('sPlayers').textContent = players.size;
-      document.getElementById('sBest').textContent = bestTime === Infinity ? '—' : bestTime + 'с';
-      document.getElementById('sGold').textContent = gold;
+      document.getElementById('sBest').textContent    = bestTime === Infinity ? '—' : bestTime + 'с';
+      document.getElementById('sGold').textContent    = gold;
 
       document.getElementById('stats').style.display = 'flex';
-      document.getElementById('table').style.display = 'table';
+      document.getElementById('table').style.display  = 'table';
     }
   </script>
 </body>
