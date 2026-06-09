@@ -15,6 +15,18 @@
       pointer-events: none;
     }
     #resultScreen, #quizScreen { position: relative; z-index: 1; }
+    .btn-next {
+      background: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-next:hover { background: #43a047; }
   </style>
 </head>
 <body>
@@ -32,6 +44,9 @@
     <div class="btn-row">
       <button class="btn-retry" onclick="location.reload()">🔄 Ещё раз</button>
       <button class="btn-back" onclick="window.location.href='../level-select.html'">← Уровни</button>
+    </div>
+    <div id="nextLevelRow" style="display:none; margin-top:12px;">
+      <button class="btn-next" onclick="window.location.href='../level3/index.html'">Дальше → Уровень 3</button>
     </div>
   </div>
 </div>
@@ -266,9 +281,10 @@ function showResult() {
     });
   }
 
-  // Прогресс — только при победе
+  // Прогресс + кнопка перехода — только при победе
   if (passed && window.Progress) {
     Progress.completeLevel(2, { time: 0, medal: medal, score: score });
+    document.getElementById('nextLevelRow').style.display = 'block';
   }
 }
 
