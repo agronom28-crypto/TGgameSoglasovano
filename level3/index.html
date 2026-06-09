@@ -7,6 +7,21 @@
   <link rel="stylesheet" href="style.css">
   <script src="../progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    .btn-next {
+      background: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      width: 100%;
+    }
+    .btn-next:hover { background: #43a047; }
+  </style>
 </head>
 <body>
 
@@ -48,6 +63,9 @@
     <div class="btn-row">
       <button class="btn-retry" onclick="location.reload()">🔄 Ещё раз</button>
       <button class="btn-back" onclick="window.location.href='../level-select.html'">← Уровни</button>
+    </div>
+    <div id="nextLevelRow" style="display:none; margin-top:12px;">
+      <button class="btn-next" onclick="window.location.href='../level4/index.html'">Дальше → Уровень 4</button>
     </div>
   </div>
 </div>
@@ -384,19 +402,35 @@ function showBooom() {
 }
 
 function endGame(win) {
+  if (!running) return; // защита от двойного вызова
   running = false;
   clearInterval(timerInterval);
+
   const elapsed = parseFloat(((performance.now() - gameStartTime) / 1000).toFixed(1));
-  const won = win || score >= TARGET_SCORE;
+  const won     = win || score >= TARGET_SCORE;
+  const medal   = won ? (elapsed < 30 ? '🥇' : (elapsed < 45 ? '🥈' : '🥉')) : '-';
+  const result  = won ? 'finish' : 'timeout';
+
+  // Аналитика — при ЛЮБОМ исходе
+  if (window.Progress) {
+    Progress.sendAnalytics(3, {
+      time:     elapsed,
+      distance: score,
+      medal:    medal,
+      result:   result,
+    });
+  }
+
   document.getElementById('resultScreen').style.display = 'flex';
+
   if (won) {
     document.getElementById('resultEmoji').textContent = '🏆';
     document.getElementById('resultTitle').textContent = 'СОГЛАСОВАНО!';
     document.getElementById('resultSub').textContent   = `Собрано ${score} согласиков! Уровень пройден!`;
     if (window.Progress) {
-      const medal = elapsed < 30 ? '🥇' : (elapsed < 45 ? '🥈' : '🥉');
       Progress.completeLevel(3, { time: elapsed, medal: medal, score: score });
     }
+    document.getElementById('nextLevelRow').style.display = 'block';
   } else {
     document.getElementById('resultEmoji').textContent = score >= 70 ? '😔' : '💥';
     document.getElementById('resultTitle').textContent = 'Время вышло!';
