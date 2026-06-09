@@ -250,8 +250,9 @@ function drawFinishLine() {
   }
   ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5;
   ctx.strokeRect(poleX1, tapeY, tapeW, 14);
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('🏁  10 км  🏁', poleX1 + tapeW/2, GY + 20);
+  // Надпись финиша — без emoji, только текст
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('10 км', poleX1 + tapeW/2, GY + 22);
   ctx.textAlign = 'left';
   ctx.restore();
 }
@@ -268,13 +269,128 @@ function obstacleBox(o) {
 function boostBox(b){return{x1:b.x,x2:b.x+44,y1:GROUND_Y-170,y2:GROUND_Y-120};}
 function overlaps(a,b){return a.x1<b.x2&&a.x2>b.x1&&a.y1<b.y2&&a.y2>b.y1;}
 
+// ─── РИСУНОК СОБАКИ (вместо 🐕)
+function drawDog(x, y) {
+  ctx.save();
+  // Туловище
+  ctx.fillStyle = '#8B5E3C';
+  ctx.beginPath();
+  ctx.ellipse(x+22, y-18, 20, 13, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Голова
+  ctx.beginPath();
+  ctx.ellipse(x+40, y-26, 13, 11, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  // Уши
+  ctx.fillStyle = '#6B3F1A';
+  ctx.beginPath(); ctx.ellipse(x+34, y-36, 5, 8, -0.4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+44, y-37, 5, 8, 0.4, 0, Math.PI*2); ctx.fill();
+  // Морда
+  ctx.fillStyle = '#C4845A';
+  ctx.beginPath(); ctx.ellipse(x+50, y-20, 8, 5, 0.3, 0, Math.PI*2); ctx.fill();
+  // Нос
+  ctx.fillStyle = '#5C3010';
+  ctx.beginPath(); ctx.arc(x+55, y-22, 3, 0, Math.PI*2); ctx.fill();
+  // Лапы
+  ctx.fillStyle = '#8B5E3C';
+  ctx.fillRect(x+6,  y-6, 7, 18);
+  ctx.fillRect(x+16, y-6, 7, 18);
+  ctx.fillRect(x+28, y-6, 7, 18);
+  ctx.fillRect(x+38, y-6, 7, 18);
+  // Хвост
+  ctx.strokeStyle = '#8B5E3C'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x+4, y-22); ctx.quadraticCurveTo(x-8, y-40, x+2, y-50); ctx.stroke();
+  // Глаз
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(x+46, y-28, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// ─── РИСУНОК ШАРИКА (вместо 🎈)
+function drawBalloon(x, y) {
+  ctx.save();
+  const cx = x + 24, top = y - 70;
+  // Тень
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.beginPath(); ctx.ellipse(cx+4, y+2, 14, 5, 0, 0, Math.PI*2); ctx.fill();
+  // Основной шар
+  const grad = ctx.createRadialGradient(cx-6, top+14, 4, cx, top+20, 26);
+  grad.addColorStop(0, '#ff6e6e');
+  grad.addColorStop(1, '#c0002a');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.ellipse(cx, top+20, 22, 26, 0, 0, Math.PI*2); ctx.fill();
+  // Блик
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.ellipse(cx-8, top+12, 7, 10, -0.5, 0, Math.PI*2); ctx.fill();
+  // Узелок
+  ctx.fillStyle = '#8B0000';
+  ctx.beginPath(); ctx.arc(cx, top+46, 4, 0, Math.PI*2); ctx.fill();
+  // Верёвка
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, top+50); ctx.quadraticCurveTo(cx+10, y-20, cx, y); ctx.stroke();
+  ctx.restore();
+}
+
+// ─── РИСУНОК МОЛНИИ (вместо ⚡)
+function drawBolt(cx, cy, size, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#FFD700';
+  ctx.shadowColor = '#FFD700';
+  ctx.shadowBlur = 16;
+  ctx.beginPath();
+  ctx.moveTo(cx + size*0.2,  cy - size*0.5);
+  ctx.lineTo(cx - size*0.1,  cy + size*0.05);
+  ctx.lineTo(cx + size*0.1,  cy + size*0.05);
+  ctx.lineTo(cx - size*0.2,  cy + size*0.5);
+  ctx.lineTo(cx + size*0.35, cy - size*0.1);
+  ctx.lineTo(cx + size*0.1,  cy - size*0.1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── ОБЪЕКТЫ
+function spawnObstacle(){state.obstacles.push({type:Math.random()>0.5?'low':'high',x:canvas.width+40});}
+function spawnBoost(){state.boosts.push({x:canvas.width+40});}
+
+function drawObstacles() {
+  state.obstacles.forEach(o => {
+    const b = obstacleBox(o);
+    if (o.type === 'low') {
+      // Собака — на уровне земли
+      drawDog(b.x1, b.y2);
+    } else {
+      // Шарик — в воздухе
+      drawBalloon((b.x1+b.x2)/2 - 24, b.y2 + 4);
+    }
+  });
+}
+
+function drawBoosts() {
+  const pulse = 1 + Math.sin(Date.now()/200) * 0.15;
+  state.boosts.forEach(b => {
+    const box = boostBox(b), cx = (box.x1+box.x2)/2;
+    const alpha = state.isJumping ? 0.95 : 0.4;
+    drawBolt(cx, box.y2 - 20, 28 * pulse, alpha);
+    if (!state.isJumping) {
+      ctx.save();
+      ctx.globalAlpha = 0.7 + Math.sin(Date.now()/300)*0.3;
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('↑', cx, box.y2 + 22);
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
+  });
+}
+
 // ─── INIT
-// Canvas рендерится в 2× размер экрана, потом CSS scale(0.5) уменьшает до 100% экрана
 const SCALE = 2;
 function initGame() {
   canvas = document.getElementById('gameCanvas');
   ctx = canvas.getContext('2d');
-  // Размер canvas в 2× пикселей, CSS сжимает до 50% (scale 0.5)
   canvas.width  = window.innerWidth  * SCALE;
   canvas.height = window.innerHeight * SCALE;
   GROUND_Y = Math.round(canvas.height * 0.78);
@@ -293,7 +409,6 @@ function initGame() {
 }
 
 // ─── УПРАВЛЕНИЕ
-// Touch-координаты множим на SCALE, так как canvas внутренний размер в 2× больше
 let touchStartY = 0;
 function bindControls() {
   const doJump = () => { if (!state.isJumping) { state.vy = -15; state.isJumping = true; } };
@@ -346,29 +461,6 @@ function drawCharacter() {
     drawStickFigure(dX,dY,dW,dH,step,boost);
   }
   ctx.restore();
-}
-
-// ─── ОБЪЕКТЫ
-function spawnObstacle(){state.obstacles.push({type:Math.random()>0.5?'low':'high',x:canvas.width+40});}
-function spawnBoost(){state.boosts.push({x:canvas.width+40});}
-function drawObstacles() {
-  state.obstacles.forEach(o=>{
-    const b=obstacleBox(o);
-    if (o.type==='low'){ctx.font='44px sans-serif';ctx.fillText('🐕',b.x1-2,b.y2+2);}
-    else{ctx.font='42px sans-serif';ctx.textAlign='center';ctx.fillText('🎈',(b.x1+b.x2)/2,b.y2+4);ctx.textAlign='left';}
-  });
-}
-function drawBoosts() {
-  const pulse=1+Math.sin(Date.now()/200)*0.15;
-  state.boosts.forEach(b=>{
-    const box=boostBox(b),cx=(box.x1+box.x2)/2;
-    ctx.save(); ctx.globalAlpha=state.isJumping?1:0.35;
-    ctx.shadowColor='#FFD700';ctx.shadowBlur=18*pulse;
-    ctx.font=`${Math.round(34*pulse)}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText('⚡',cx,box.y2);
-    if (!state.isJumping){ctx.globalAlpha=0.6+Math.sin(Date.now()/300)*0.3;ctx.font='bold 16px sans-serif';ctx.fillStyle='#FFD700';ctx.fillText('↑',cx,box.y2+28);}
-    ctx.textAlign='left';ctx.restore();
-  });
 }
 
 // ─── UPDATE
@@ -447,7 +539,6 @@ function showFinishResult() {
   document.getElementById('skipBtn').style.display = 'none';
   document.getElementById('finishResult').classList.add('show');
 }
-
 function playFinishCutscene(elapsed, score, medal) {
   document.getElementById('frTime').textContent   = `${elapsed}с`;
   document.getElementById('frScore').textContent  = `${score} км`;
@@ -473,7 +564,6 @@ function getMedal(reason, score, elapsed) {
   if (score>=4) return {icon:'💪',label:'Неплохо — ещё раз!'};
   return {icon:'😅',label:'Попробуй ещё раз'};
 }
-
 function endGame(reason) {
   state.running=false;
   const elapsed=parseFloat((GAME_DURATION-state.timeLeft).toFixed(1));
