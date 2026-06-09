@@ -52,7 +52,7 @@ function loadAssets(cb) {
     fallbackImg.onerror = () => { imgMode = 'none';   cb(); };
     fallbackImg.src = '../Pictures/3D%20person.png';
   };
-  runImg.src = '../Pictures/run_spritesheet.png';
+  runImg.src = '../Pictures/run_spritesheet.webp';
 }
 
 let state = {};
@@ -250,7 +250,6 @@ function drawFinishLine() {
   }
   ctx.strokeStyle = '#b71c1c'; ctx.lineWidth = 1.5;
   ctx.strokeRect(poleX1, tapeY, tapeW, 14);
-  // Надпись финиша — без emoji, только текст
   ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('10 км', poleX1 + tapeW/2, GY + 22);
   ctx.textAlign = 'left';
@@ -269,75 +268,53 @@ function obstacleBox(o) {
 function boostBox(b){return{x1:b.x,x2:b.x+44,y1:GROUND_Y-170,y2:GROUND_Y-120};}
 function overlaps(a,b){return a.x1<b.x2&&a.x2>b.x1&&a.y1<b.y2&&a.y2>b.y1;}
 
-// ─── РИСУНОК СОБАКИ (вместо 🐕)
+// ─── РИСУНОК СОБАКИ
 function drawDog(x, y) {
   ctx.save();
-  // Туловище
   ctx.fillStyle = '#8B5E3C';
-  ctx.beginPath();
-  ctx.ellipse(x+22, y-18, 20, 13, 0, 0, Math.PI*2);
-  ctx.fill();
-  // Голова
-  ctx.beginPath();
-  ctx.ellipse(x+40, y-26, 13, 11, 0.2, 0, Math.PI*2);
-  ctx.fill();
-  // Уши
+  ctx.beginPath(); ctx.ellipse(x+22, y-18, 20, 13, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+40, y-26, 13, 11, 0.2, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#6B3F1A';
   ctx.beginPath(); ctx.ellipse(x+34, y-36, 5, 8, -0.4, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(x+44, y-37, 5, 8, 0.4, 0, Math.PI*2); ctx.fill();
-  // Морда
   ctx.fillStyle = '#C4845A';
   ctx.beginPath(); ctx.ellipse(x+50, y-20, 8, 5, 0.3, 0, Math.PI*2); ctx.fill();
-  // Нос
   ctx.fillStyle = '#5C3010';
   ctx.beginPath(); ctx.arc(x+55, y-22, 3, 0, Math.PI*2); ctx.fill();
-  // Лапы
   ctx.fillStyle = '#8B5E3C';
-  ctx.fillRect(x+6,  y-6, 7, 18);
-  ctx.fillRect(x+16, y-6, 7, 18);
-  ctx.fillRect(x+28, y-6, 7, 18);
-  ctx.fillRect(x+38, y-6, 7, 18);
-  // Хвост
+  ctx.fillRect(x+6,  y-6, 7, 18); ctx.fillRect(x+16, y-6, 7, 18);
+  ctx.fillRect(x+28, y-6, 7, 18); ctx.fillRect(x+38, y-6, 7, 18);
   ctx.strokeStyle = '#8B5E3C'; ctx.lineWidth = 5; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(x+4, y-22); ctx.quadraticCurveTo(x-8, y-40, x+2, y-50); ctx.stroke();
-  // Глаз
   ctx.fillStyle = '#1a1a1a';
   ctx.beginPath(); ctx.arc(x+46, y-28, 2.5, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
-// ─── РИСУНОК ШАРИКА (вместо 🎈)
+// ─── РИСУНОК ШАРИКА
 function drawBalloon(x, y) {
   ctx.save();
   const cx = x + 24, top = y - 70;
-  // Тень
   ctx.fillStyle = 'rgba(0,0,0,0.12)';
   ctx.beginPath(); ctx.ellipse(cx+4, y+2, 14, 5, 0, 0, Math.PI*2); ctx.fill();
-  // Основной шар
   const grad = ctx.createRadialGradient(cx-6, top+14, 4, cx, top+20, 26);
-  grad.addColorStop(0, '#ff6e6e');
-  grad.addColorStop(1, '#c0002a');
+  grad.addColorStop(0, '#ff6e6e'); grad.addColorStop(1, '#c0002a');
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.ellipse(cx, top+20, 22, 26, 0, 0, Math.PI*2); ctx.fill();
-  // Блик
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
   ctx.beginPath(); ctx.ellipse(cx-8, top+12, 7, 10, -0.5, 0, Math.PI*2); ctx.fill();
-  // Узелок
   ctx.fillStyle = '#8B0000';
   ctx.beginPath(); ctx.arc(cx, top+46, 4, 0, Math.PI*2); ctx.fill();
-  // Верёвка
   ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(cx, top+50); ctx.quadraticCurveTo(cx+10, y-20, cx, y); ctx.stroke();
   ctx.restore();
 }
 
-// ─── РИСУНОК МОЛНИИ (вместо ⚡)
+// ─── РИСУНОК МОЛНИИ
 function drawBolt(cx, cy, size, alpha) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#FFD700';
-  ctx.shadowColor = '#FFD700';
-  ctx.shadowBlur = 16;
+  ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16;
   ctx.beginPath();
   ctx.moveTo(cx + size*0.2,  cy - size*0.5);
   ctx.lineTo(cx - size*0.1,  cy + size*0.05);
@@ -345,8 +322,7 @@ function drawBolt(cx, cy, size, alpha) {
   ctx.lineTo(cx - size*0.2,  cy + size*0.5);
   ctx.lineTo(cx + size*0.35, cy - size*0.1);
   ctx.lineTo(cx + size*0.1,  cy - size*0.1);
-  ctx.closePath();
-  ctx.fill();
+  ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
@@ -357,13 +333,8 @@ function spawnBoost(){state.boosts.push({x:canvas.width+40});}
 function drawObstacles() {
   state.obstacles.forEach(o => {
     const b = obstacleBox(o);
-    if (o.type === 'low') {
-      // Собака — на уровне земли
-      drawDog(b.x1, b.y2);
-    } else {
-      // Шарик — в воздухе
-      drawBalloon((b.x1+b.x2)/2 - 24, b.y2 + 4);
-    }
+    if (o.type === 'low') drawDog(b.x1, b.y2);
+    else drawBalloon((b.x1+b.x2)/2 - 24, b.y2 + 4);
   });
 }
 
@@ -376,12 +347,9 @@ function drawBoosts() {
     if (!state.isJumping) {
       ctx.save();
       ctx.globalAlpha = 0.7 + Math.sin(Date.now()/300)*0.3;
-      ctx.fillStyle = '#FFD700';
-      ctx.font = 'bold 18px sans-serif';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('↑', cx, box.y2 + 22);
-      ctx.textAlign = 'left';
-      ctx.restore();
+      ctx.textAlign = 'left'; ctx.restore();
     }
   });
 }
@@ -516,11 +484,7 @@ function draw() {
   const rs=ctx.createLinearGradient(0,GROUND_Y-10,0,GROUND_Y+10);
   rs.addColorStop(0,'rgba(0,0,0,0.18)');rs.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=rs;ctx.fillRect(0,GROUND_Y-10,canvas.width,20);
-  drawBoosts();
-  drawObstacles();
-  drawFinishLine();
-  drawDust();
-  drawCharacter();
+  drawBoosts();drawObstacles();drawFinishLine();drawDust();drawCharacter();
   if (state.timeLeft>55){
     ctx.fillStyle='rgba(0,0,0,0.55)';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
     ctx.fillText('↑ прыжок   ↓ присесть',canvas.width/2,GROUND_Y-160);

@@ -12,9 +12,7 @@
       background: #000; align-items: center; justify-content: center;
     }
     #introOverlay.show { display: flex; }
-    #introVid {
-      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    }
+    #introVid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #introSkip {
       position: absolute; top: 18px; right: 18px; z-index: 10;
       background: rgba(0,0,0,0.55); color: #fff;
@@ -43,8 +41,6 @@
       0%,100% { transform: scale(1);    box-shadow: 0 0 24px rgba(255,140,0,0.6); }
       50%      { transform: scale(1.1); box-shadow: 0 0 44px rgba(255,140,0,0.9); }
     }
-
-    /* Скелетон для незагруженных карточек */
     .card-bg {
       background: linear-gradient(135deg,#1a237e 0%,#0d1b3e 100%);
       transition: opacity 0.3s;
@@ -88,9 +84,9 @@
     }
 
     const LEVELS = [
-      { n: 1,  title: 'Забег',         sub: '10 км до офиса',        img: 'Pictures/Main_level%201.png', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
-      { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр',      img: 'Pictures/MainLevel2.png',     path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
-      { n: 3,  title: 'Деньги с неба', sub: 'Собери 100 согласиков', img: 'Pictures/Main_level3.png',    path: 'level3/index.html', intro: null },
+      { n: 1,  title: 'Забег',         sub: '10 км до офиса',        img: 'Pictures/Main_level1.webp', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
+      { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр',      img: 'Pictures/MainLevel2.webp',  path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
+      { n: 3,  title: 'Деньги с неба', sub: 'Собери 100 согласиков', img: 'Pictures/Main_level3.webp',  path: 'level3/index.html', intro: null },
       { n: 4,  title: 'Совещание',     sub: 'Скоро...',               img: null, path: null, intro: null },
       { n: 5,  title: 'Командировка',  sub: 'Скоро...',               img: null, path: null, intro: null },
       { n: 6,  title: 'Аудит',         sub: 'Скоро...',               img: null, path: null, intro: null },
@@ -150,8 +146,6 @@
 
     function buildGrid() {
       const grid = document.getElementById('grid');
-
-      // IntersectionObserver — грузим фото карточки только когда она видна
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (!entry.isIntersecting) return;
@@ -178,7 +172,6 @@
         const bg = document.createElement('div');
         bg.className = 'card-bg';
         if (lvl.img) {
-          // Не ставим backgroundImage сразу — откладываем до появления в viewport
           bg.dataset.src = lvl.img;
           observer.observe(bg);
         }
