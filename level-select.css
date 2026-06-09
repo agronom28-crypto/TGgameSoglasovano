@@ -48,21 +48,34 @@ body {
   justify-content: flex-end;
   cursor: pointer;
   transition: transform 0.15s;
+  background: #1a1a2e;
 }
 .card.unlocked:active { transform: scale(0.96); }
 
-/* Фон */
+/* Картинка полностью помещается в рамку */
 .card-bg {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
   transition: filter 0.3s;
+  display: block;
 }
 .card.locked .card-bg {
   filter: blur(6px) brightness(0.45) grayscale(0.6);
   transform: scale(1.08);
+}
+
+/* Для заголовков без картинки (fallback) */
+.card-bg-fallback {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: filter 0.3s;
 }
 
 /* Оверлей для locked */
@@ -150,7 +163,7 @@ body {
   50%       { box-shadow: 0 0 30px rgba(255,140,0,0.85); }
 }
 
-/* Свечение рамки разблокированной карточки */
+/* Свечение рамки */
 .card.unlocked {
   box-shadow: 0 0 0 2px rgba(255,180,0,0.35), 0 4px 24px rgba(0,0,0,0.6);
 }
