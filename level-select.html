@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Выбор уровня — Согласовано?</title>
   <link rel="stylesheet" href="level-select.css">
+  <script src="progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     #introOverlay {
@@ -41,37 +42,38 @@
       0%,100% { transform: scale(1);    box-shadow: 0 0 24px rgba(255,140,0,0.6); }
       50%      { transform: scale(1.1); box-shadow: 0 0 44px rgba(255,140,0,0.9); }
     }
-
-    /* Картинка уровня — img заполняет всю рамку целиком */
     .card-bg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center top;
-      display: block;
-      transition: filter 0.3s, opacity 0.4s;
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: center top;
+      display: block; transition: filter 0.3s, opacity 0.4s;
       opacity: 0;
-      background: linear-gradient(135deg, #1a237e 0%, #0d1b3e 100%);
     }
     .card-bg.loaded { opacity: 1; }
-    .card.locked .card-bg {
-      filter: blur(6px) brightness(0.45) grayscale(0.6);
-      transform: scale(1.08);
-    }
-    /* Плейсхолдер пока грузится */
+    .card.locked .card-bg { filter: blur(6px) brightness(0.45) grayscale(0.6); transform: scale(1.08); }
     .card-placeholder {
-      position: absolute;
-      inset: 0;
+      position: absolute; inset: 0;
       background: linear-gradient(90deg, #1a2a4a 25%, #243450 50%, #1a2a4a 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.2s infinite;
+      background-size: 200% 100%; animation: shimmer 1.2s infinite;
     }
-    @keyframes shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Статистика уровня */
+    .level-stats {
+      position: absolute; top: 10px; right: 10px;
+      z-index: 3; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
     }
+    .stat-medal { font-size: 20px; line-height: 1; }
+    .stat-time {
+      background: rgba(0,0,0,0.65); color: #fff;
+      font-size: 11px; padding: 2px 7px; border-radius: 10px;
+    }
+    .stat-attempts {
+      background: rgba(0,0,0,0.5); color: #aaa;
+      font-size: 10px; padding: 1px 6px; border-radius: 8px;
+    }
+    /* Зелёная галочка пройденного */
+    .card.done .level-badge { background: rgba(0,120,0,0.7); color: #7fff7f; border-color: #4caf50; }
+    .card.done { box-shadow: 0 0 0 2px rgba(76,175,80,0.5), 0 4px 24px rgba(0,0,0,0.6); }
   </style>
 </head>
 <body>
@@ -105,21 +107,16 @@
       { n: 1,  title: 'Забег',         sub: '10 км до офиса',        img: 'Pictures/Main_level1.webp', path: 'level1/index.html', intro: 'Pictures/main_level1_video.mp4' },
       { n: 2,  title: 'Собеседование', sub: 'Пройди HR-фильтр',      img: 'Pictures/MainLevel2.webp',  path: 'level2/index.html', intro: 'Pictures/main_level2_video.mp4' },
       { n: 3,  title: 'Деньги с неба', sub: 'Собери 100 согласиков', img: 'Pictures/Main_level3.webp',  path: 'level3/index.html', intro: null },
-      { n: 4,  title: 'Совещание',     sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 5,  title: 'Командировка',  sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 6,  title: 'Аудит',         sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 7,  title: 'Презентация',   sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 8,  title: 'Дедлайн',       sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 9,  title: 'Корпоратив',    sub: 'Скоро...',               img: null, path: null, intro: null },
-      { n: 10, title: 'Финал',         sub: 'Скоро...',               img: null, path: null, intro: null },
+      { n: 4,  title: 'Совещание',     sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 5,  title: 'Командировка',  sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 6,  title: 'Аудит',         sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 7,  title: 'Презентация',   sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 8,  title: 'Дедлайн',       sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 9,  title: 'Корпоратив',    sub: 'Скоро...',  img: null, path: null, intro: null },
+      { n: 10, title: 'Финал',         sub: 'Скоро...',  img: null, path: null, intro: null },
     ];
 
-    function isUnlocked(n) {
-      if (n === 1) return true;
-      if (n === 2) return !!localStorage.getItem('level1_done');
-      if (n === 3) return !!localStorage.getItem('level2_done');
-      return false;
-    }
+    let progressData = { levels: {} };
 
     let pendingPath = null;
     const overlay    = document.getElementById('introOverlay');
@@ -143,18 +140,15 @@
          .catch(() => { tapOverlay.style.display = 'flex'; });
       }
     }
-
     function resumeVideo() {
       tapOverlay.style.display = 'none';
       introVid.play().catch(() => goToLevel());
     }
-
     function goToLevel() {
       introVid.pause();
       overlay.classList.remove('show');
       if (pendingPath) window.location.href = pendingPath;
     }
-
     function closeIntro() {
       introVid.pause();
       overlay.classList.remove('show');
@@ -164,32 +158,34 @@
 
     function buildGrid() {
       const grid = document.getElementById('grid');
+      grid.innerHTML = '';
 
       LEVELS.forEach(lvl => {
-        const unlocked = isUnlocked(lvl.n);
-        const card = document.createElement('div');
-        card.className = 'card' + (unlocked ? ' unlocked' : ' locked');
+        const unlocked = Progress.isLevelUnlocked(lvl.n, progressData);
+        const stats    = Progress.getLevelStats(lvl.n, progressData);
+        const done     = !!stats?.done;
 
-        // Плейсхолдер пока грузится картинка
+        const card = document.createElement('div');
+        card.className = 'card' + (unlocked ? ' unlocked' : ' locked') + (done ? ' done' : '');
+
+        // Плейсхолдер
         const placeholder = document.createElement('div');
         placeholder.className = 'card-placeholder';
         card.appendChild(placeholder);
 
-        // Картинка через <img> — полностью помещается в рамку
+        // Картинка
         if (lvl.img) {
           const img = document.createElement('img');
           img.className = 'card-bg';
           img.alt = lvl.title;
           img.loading = 'lazy';
-          img.onload = () => {
-            img.classList.add('loaded');
-            placeholder.style.display = 'none';
-          };
+          img.onload  = () => { img.classList.add('loaded'); placeholder.style.display = 'none'; };
           img.onerror = () => { placeholder.style.display = 'none'; };
           img.src = lvl.img;
           card.appendChild(img);
         }
 
+        // Оверлей + замок
         if (!unlocked) {
           const ov = document.createElement('div');
           ov.className = 'card-overlay';
@@ -200,20 +196,35 @@
           card.appendChild(lock);
         }
 
+        // Бейдж номера
         const badge = document.createElement('div');
         badge.className = 'level-badge';
-        badge.textContent = lvl.n;
+        badge.textContent = done ? '✓ ' + lvl.n : lvl.n;
         card.appendChild(badge);
 
+        // Статистика пройденного уровня
+        if (done && stats) {
+          const st = document.createElement('div');
+          st.className = 'level-stats';
+          st.innerHTML = `
+            <div class="stat-medal">${stats.medal || ''}</div>
+            ${stats.time ? `<div class="stat-time">⏱ ${stats.time}с</div>` : ''}
+            ${stats.attempts > 1 ? `<div class="stat-attempts">${stats.attempts}×</div>` : ''}
+          `;
+          card.appendChild(st);
+        }
+
+        // Название + описание
         const info = document.createElement('div');
         info.className = 'card-info';
         info.innerHTML = `<div class="card-title">${lvl.title}</div><div class="card-sub">${lvl.sub}</div>`;
         card.appendChild(info);
 
+        // Кнопка
         if (unlocked && lvl.path) {
           const btn = document.createElement('button');
           btn.className = 'play-btn';
-          btn.textContent = 'ИГРАТЬ';
+          btn.textContent = done ? 'ИГРАТЬ СНОВА' : 'ИГРАТЬ';
           btn.onclick = () => lvl.intro ? playIntro(lvl.intro, lvl.path) : (window.location.href = lvl.path);
           card.appendChild(btn);
         }
@@ -222,17 +233,18 @@
       });
     }
 
-    buildGrid();
+    // Загрузить прогресс и отрисовать сетку
+    Progress.loadProgress(data => {
+      progressData = data;
+      buildGrid();
 
-    const autoplayN = parseInt(new URLSearchParams(location.search).get('autoplay'));
-    if (autoplayN) {
-      const lvl = LEVELS.find(l => l.n === autoplayN);
-      if (lvl && lvl.intro && lvl.path) {
-        setTimeout(() => playIntro(lvl.intro, lvl.path), 100);
-      } else if (lvl && lvl.path) {
-        setTimeout(() => { window.location.href = lvl.path; }, 100);
+      const autoplayN = parseInt(new URLSearchParams(location.search).get('autoplay'));
+      if (autoplayN) {
+        const lvl = LEVELS.find(l => l.n === autoplayN);
+        if (lvl && lvl.intro && lvl.path) setTimeout(() => playIntro(lvl.intro, lvl.path), 100);
+        else if (lvl && lvl.path) setTimeout(() => { window.location.href = lvl.path; }, 100);
       }
-    }
+    });
   </script>
 </body>
 </html>
