@@ -5,21 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Уровень 1 — Согласовано?</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../leaderboard.css">
   <script src="../progress.js"></script>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     #resultEmoji {
-      display: block;
-      width: 180px;
-      height: 180px;
-      margin: 0 auto 12px;
-      border-radius: 16px;
+      display: block; width: 180px; height: 180px;
+      margin: 0 auto 12px; border-radius: 16px;
     }
   </style>
 </head>
 <body>
 
-  <!-- ИГРА -->
   <div id="gameWrapper">
     <canvas id="gameCanvas"></canvas>
     <div id="ui">
@@ -28,7 +25,6 @@
     </div>
   </div>
 
-  <!-- ФИНИШНЫЙ РОЛИК -->
   <div id="finishScreen">
     <video id="finishVideo" playsinline preload="auto">
       <source src="../Pictures/final_level1.mp4" type="video/mp4">
@@ -42,6 +38,12 @@
       <div class="stat-row">📏 Дистанция <span id="frScore">0 км</span></div>
       <div id="frMedal">🥇</div>
       <div id="frMedalLabel"></div>
+
+      <!-- Рейтинг -->
+      <div class="leaderboard-wrap">
+        <h3>🏆 Топ-5 игроков (время)</h3>
+        <div id="lb1" class="lb-loading">Загрузка...</div>
+      </div>
 
       <div id="level2Banner">
         <div id="lvl2Badge">УРОВЕНЬ 2</div>
@@ -58,7 +60,6 @@
     </div>
   </div>
 
-  <!-- ЭКРАН ПРОИГРЫША -->
   <div id="result">
     <div id="resultCard">
       <canvas id="resultEmoji"></canvas>
@@ -78,7 +79,6 @@
 
   <script src="game.js"></script>
   <script>
-    // Удаляем белый фон через Canvas
     (function() {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -93,8 +93,7 @@
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i], g = data[i+1], b = data[i+2];
           if (r > 210 && g > 210 && b > 210) {
-            const brightness = Math.min(r, g, b);
-            data[i+3] = Math.round((255 - brightness) * 1.4);
+            data[i+3] = Math.round((255 - Math.min(r,g,b)) * 1.4);
           }
         }
         ctx.putImageData(imageData, 0, 0);
@@ -107,6 +106,39 @@
     function goLevel2() {
       window.location.href = '../level-select.html?autoplay=2';
     }
+
+    function loadLeaderboard1() {
+      Progress.fetchLeaderboard(1, function(list) {
+        const container = document.getElementById('lb1');
+        if (!list || list.length === 0) {
+          container.innerHTML = '<div class="lb-empty">Пока никто не финишировал уровень</div>';
+          return;
+        }
+        const myNickname = Progress.loadNicknameLocal ? Progress.loadNicknameLocal() : null;
+        const medals = ['🥇','🥈','🥉','👍','👍'];
+        container.innerHTML = list.map(e => {
+          const isMe = myNickname && e.name === myNickname;
+          return `<div class="lb-row${isMe ? ' lb-me' : ''}">
+            <span class="lb-rank">${medals[e.rank-1] || e.rank}</span>
+            <span class="lb-name">${e.name}</span>
+            <span class="lb-score">${e.time}с</span>
+          </div>`;
+        }).join('');
+      });
+    }
+
+    // Загружаем рейтинг как только показывается экран финиша
+    const _origShowFinishResult = window.showFinishResult;
+    window.showFinishResult = function() {
+      if (typeof _origShowFinishResult === 'function') _origShowFinishResult();
+      else {
+        const video = document.getElementById('finishVideo');
+        video.pause();
+        document.getElementById('skipBtn').style.display = 'none';
+        document.getElementById('finishResult').classList.add('show');
+      }
+      loadLeaderboard1();
+    };
 
     function shareResult() {
       const score = document.getElementById('frScore')?.textContent
