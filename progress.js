@@ -64,17 +64,19 @@ function loadCloud(callback) {
 // ─── Отправка аналитики ────────────────────────────────────
 function sendAnalytics(levelN, data) {
   try {
-    const user     = getTgUser();
-    const userId   = user?.id       || 'anonymous';
-    const tgName   = user?.username || user?.first_name || '';
-    const nickname = loadNicknameLocal();
+    const user       = getTgUser();
+    const userId     = user?.id       || 'anonymous';
+    // username — реальный TG @username (или first_name если нет @username)
+    const tgUsername = user?.username || user?.first_name || '';
+    // nickname — имя, которое игрок ввёл сам в игре
+    const nickname   = loadNicknameLocal() || '';
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId,
-        username: nickname || tgName || 'anonymous',
-        nickname: nickname || '',
+        username: tgUsername,  // ← колонка D: только @TG-имя
+        nickname,              // ← колонка C: никнейм из игры
         level:    levelN,
         time:     data.time     || 0,
         distance: data.distance || data.score || 0,
@@ -149,5 +151,5 @@ function getLevelStats(levelN, progressData) {
 window.Progress = {
   loadProgress, completeLevel, isLevelUnlocked, getLevelStats,
   sendAnalytics, getNickname, setNickname, fetchLeaderboard,
-  loadNicknameLocal, // нужен index.html уровней для подсветки своей строки
+  loadNicknameLocal,
 };
