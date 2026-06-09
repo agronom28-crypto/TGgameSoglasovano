@@ -6,6 +6,17 @@
   <title>Уровень 1 — Согласовано?</title>
   <link rel="stylesheet" href="style.css">
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    #resultEmoji {
+      display: block;
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+      margin: 0 auto 12px;
+      mix-blend-mode: multiply;
+      border-radius: 16px;
+    }
+  </style>
 </head>
 <body>
 
@@ -48,10 +59,10 @@
     </div>
   </div>
 
-  <!-- ЭКРАН РЕЗУЛЬТАТА -->
+  <!-- ЭКРАН ПРОИГРЫША -->
   <div id="result">
     <div id="resultCard">
-      <div id="resultEmoji">💥</div>
+      <img id="resultEmoji" src="../Pictures/Level1_SadGameOver.png" alt="Game Over">
       <div id="resultTitle">Game Over</div>
       <div class="stat-row">ℹ️ Результат <span id="statScore">0 км</span></div>
       <div class="stat-row">⏱ Время <span id="statTime">0с</span></div>
@@ -72,7 +83,6 @@
 
     function goLevel2() {
       localStorage.setItem('level1_done', '1');
-      // Переходим на level-select с параметром — там запустится видео уровня 2
       window.location.href = '../level-select.html?autoplay=2';
     }
 
