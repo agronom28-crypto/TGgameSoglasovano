@@ -90,7 +90,7 @@ const QUESTIONS = [
     q: "Как вы справляетесь со стрессом?",
     answers: ["Дыхательные практики 🧘", "Кричу в подушку 🛏️", "Ем печеньки 🍪", "Стресс? Не слышал о таком 😎"],
     correct: 3,
-    comment: "Дзен-мастер! Валентина Борисовна завидует вашему спокойствию"
+    comment: "Дзэн-мастер! Валентина Борисовна завидует вашему спокойствию"
   },
   {
     q: "Опишите ваш опыт работы в команде",
@@ -166,13 +166,13 @@ const QUESTIONS = [
   },
   {
     q: "Готовы ли вы к командировкам?",
-    answers: ["Да, люблю путешествовать ✈️", "Только если Мальдивы 🏝️", "Смотря куда — в Бухгалтерию не поеду 🏢", "Командировка = бесплатный отпуск? 😏"],
+    answers: ["Да, люблю путешествовать ✈️", "Только если Мальдивы 🏕️", "Смотря куда — в Бухгалтерию не поеду 🏢", "Командировка = бесплатный отпуск? 😏"],
     correct: 0,
     comment: "Мобильный сотрудник — мечта компании! Хотя насчёт Мальдив идею запомним 🌴"
   },
   {
-    q: "Какой ваш опыт работы с Excel?",
-    answers: ["Продвинутый пользователь 📊", "Умею включать 💻", "Однажды сделал красивую таблицу 🌈", "Excel и я — это сложные отношения 💔"],
+    q: "Какой у вас опыт работы с Excel?",
+    answers: ["Продвинутый пользователь 📊", "Умею включать 💻", "Однажды сделал красивую таблицу 🌈", "Ехсель и я — это сложные отношения 💔"],
     correct: 0,
     comment: "Профи! Хотя 'сложные отношения с Excel' — это диагноз для половины офиса 😂"
   },
@@ -244,18 +244,30 @@ function showResult() {
   document.getElementById('quizScreen').style.display = 'none';
   document.getElementById('resultScreen').style.display = 'flex';
   document.getElementById('resultScore').textContent = `Правильных ответов: ${score} из 20`;
-  let emoji, title, comment, passed;
-  if (score >= 18)      { emoji='🏆'; title='ПРИНЯТ(А)!';             comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; passed=true; }
-  else if (score >= 14) { emoji='😎'; title='Почти идеал!';           comment='Мы вам перезвоним. Честно. Наверное.'; passed=true; }
-  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...';      comment='Приходите через полгода. Подучитесь.'; passed=false; }
-  else if (score >= 5)  { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; passed=false; }
-  else                  { emoji='💀'; title='Это было... смело';       comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; passed=false; }
+
+  let emoji, title, comment, passed, medal;
+  if (score >= 18)      { emoji='🏆'; title='ПРИНЯТ(А)!';             comment='Валентина Борисовна рыдает от счастья. Вы идеальный сотрудник!'; passed=true;  medal='🥇'; }
+  else if (score >= 14) { emoji='😎'; title='Почти идеал!';           comment='Мы вам перезвоним. Честно. Наверное.'; passed=true;  medal='🥈'; }
+  else if (score >= 10) { emoji='🤔'; title='Есть потенциал...';      comment='Приходите через полгода. Подучитесь.'; passed=false; medal='🥉'; }
+  else if (score >= 5)  { emoji='😬'; title='Ну... спасибо за визит'; comment='Валентина Борисовна тихо плачет за кофемашиной.'; passed=false; medal='-';    }
+  else                  { emoji='💀'; title='Это было... смело';       comment='Мы сохраним ваше резюме. В мусорной корзине. Но сохраним.'; passed=false; medal='-';    }
+
   document.getElementById('resultEmoji').textContent   = emoji;
   document.getElementById('resultTitle').textContent   = title;
   document.getElementById('resultComment').textContent = comment;
 
+  // Аналитика — при ЛЮБОМ результате
+  if (window.Progress) {
+    Progress.sendAnalytics(2, {
+      time:     0,
+      distance: score,
+      medal:    medal,
+      result:   passed ? 'finish' : 'fail',
+    });
+  }
+
+  // Прогресс — только при победе
   if (passed && window.Progress) {
-    const medal = score >= 18 ? '🥇' : '🥈';
     Progress.completeLevel(2, { time: 0, medal: medal, score: score });
   }
 }
