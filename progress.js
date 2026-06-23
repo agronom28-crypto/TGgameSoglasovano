@@ -13,28 +13,24 @@ function getTgUser() {
   return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
 }
 
-// ─── Кэш TG-данных ─────────────────────────────────────────
-// Вызывается один раз при старте (из index.html после загрузки TG SDK)
+// ─── Кэш TG-данных ──────────────────────────────────────────────
 function cacheTgUser() {
   const user = getTgUser();
   if (user?.id) {
     try {
       localStorage.setItem(TG_USER_KEY, JSON.stringify({
         id:       String(user.id),
-        username: user.username || '', // только @username, без first_name
+        username: user.username || '',
       }));
     } catch(e) {}
   }
 }
 
-// Возвращает кэшированные TG-данные (или то что есть сейчас)
 function getCachedTgUser() {
-  // Сначала пробуем live-данные
   const live = getTgUser();
   if (live?.id) {
     return { id: String(live.id), username: live.username || '' };
   }
-  // Fallback: кэш из localStorage
   try {
     const raw = localStorage.getItem(TG_USER_KEY);
     if (raw) return JSON.parse(raw);
@@ -42,7 +38,7 @@ function getCachedTgUser() {
   return null;
 }
 
-// ─── Никнейм ──────────────────────────────────────────────
+// ─── Никнейм ──────────────────────────────────────────────────────
 function saveNicknameLocal(name) {
   try { localStorage.setItem(NICKNAME_KEY, name); } catch(e) {}
 }
@@ -57,18 +53,58 @@ function loadNicknameCloud(callback) {
   if (!tgCloud) { callback(null); return; }
   tgCloud.getItem(NICKNAME_KEY, (err, value) => callback(err || !value ? null : value));
 }
+
+// Загрузить никнейм: сервер → CloudStorage → localStorage
 function getNickname(callback) {
-  loadNicknameCloud(cloud => {
-    if (cloud) { saveNicknameLocal(cloud); callback(cloud); return; }
-    callback(loadNicknameLocal());
-  });
+  const tgUser = getCachedTgUser();
+  if (tgUser?.id) {
+    fetch(`${ANALYTICS_URL}/api/player?userId=${tgUser.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.found && data.nickname) {
+          saveNicknameLocal(data.nickname);
+          callback(data.nickname);
+        } else {
+          loadNicknameCloud(cloud => {
+            if (cloud) { saveNicknameLocal(cloud); callback(cloud); return; }
+            callback(loadNicknameLocal());
+          });
+        }
+      })
+      .catch(() => {
+        // Нет сети — fallback на локальное хранение
+        loadNicknameCloud(cloud => {
+          if (cloud) { saveNicknameLocal(cloud); callback(cloud); return; }
+          callback(loadNicknameLocal());
+        });
+      });
+  } else {
+    loadNicknameCloud(cloud => {
+      if (cloud) { saveNicknameLocal(cloud); callback(cloud); return; }
+      callback(loadNicknameLocal());
+    });
+  }
 }
+
+// Сохранить никнейм везде: сервер + CloudStorage + localStorage
 function setNickname(name, cb) {
   saveNicknameLocal(name);
   saveNicknameCloud(name, cb);
+  const tgUser = getCachedTgUser();
+  if (tgUser?.id) {
+    fetch(`${ANALYTICS_URL}/api/player`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId:     tgUser.id,
+        nickname:   name,
+        tgUsername: tgUser.username || '',
+      }),
+    }).catch(() => {});
+  }
 }
 
-// ─── Примитивы хранения ────────────────────────────────────
+// ─── Примитивы хранения ──────────────────────────────────────────────
 function saveLocal(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
 }
@@ -90,20 +126,20 @@ function loadCloud(callback) {
   });
 }
 
-// ─── Отправка аналитики ────────────────────────────────────
+// ─── Отправка аналитики ────────────────────────────────────────────
 function sendAnalytics(levelN, data) {
   try {
-    const tgUser   = getCachedTgUser();       // берём кэшированные данные
-    const userId   = tgUser?.id || 'anonymous';
-    const tgUsername = tgUser?.username || ''; // только реальный @username
-    const nickname = loadNicknameLocal() || '';
+    const tgUser     = getCachedTgUser();
+    const userId     = tgUser?.id || 'anonymous';
+    const tgUsername = tgUser?.username || '';
+    const nickname   = loadNicknameLocal() || '';
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId,
-        username: tgUsername,  // колонка D: @TG-имя
-        nickname,              // колонка C: никнейм из игры
+        username: tgUsername,
+        nickname,
         level:    levelN,
         time:     data.time     || 0,
         distance: data.distance || data.score || 0,
@@ -114,7 +150,7 @@ function sendAnalytics(levelN, data) {
   } catch(e) {}
 }
 
-// ─── Рейтинг (топ-5) ──────────────────────────────────────
+// ─── Рейтинг (топ-5) ───────────────────────────────────────────────
 function fetchLeaderboard(levelN, callback) {
   fetch(`${ANALYTICS_URL}/api/leaderboard?level=${levelN}&top=5`)
     .then(r => r.json())
@@ -122,7 +158,7 @@ function fetchLeaderboard(levelN, callback) {
     .catch(() => callback([]));
 }
 
-// ─── Публичный API ─────────────────────────────────────────
+// ─── Публичный API ──────────────────────────────────────────────────
 function loadProgress(callback) {
   const local = loadLocal();
   loadCloud(cloud => {
