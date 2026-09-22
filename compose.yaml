@@ -1,0 +1,7 @@
+services:
+  game:
+    build: .
+    container_name: soglasovano-game
+    restart: unless-stopped
+    ports:
+      - "8080:80"

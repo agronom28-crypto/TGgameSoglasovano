@@ -50,7 +50,7 @@ function loadAssets(cb) {
     fallbackImg = new Image();
     fallbackImg.onload  = () => { imgMode = 'single'; cb(); };
     fallbackImg.onerror = () => { imgMode = 'none';   cb(); };
-    fallbackImg.src = '../Pictures/3D%20person.png';
+    fallbackImg.src = '../Pictures/character.png';
   };
   runImg.src = '../Pictures/run_spritesheet.webp';
 }
@@ -539,14 +539,9 @@ function endGame(reason) {
   if (window.Telegram?.WebApp)
     Telegram.WebApp.sendData(JSON.stringify({ score, time: elapsed, reason }));
 
-  // Аналитика — при ЛЮБОМ исходе
-  if (window.Progress) {
-    Progress.sendAnalytics(1, {
-      time:     elapsed,
-      distance: score,
-      medal:    reason === 'finish' ? medal.icon : '-',
-      result:   reason, // 'finish' | 'hit' | 'timeout'
-    });
+  // completeLevel отправляет успешный финиш; отдельно отправляем только поражения.
+  if (reason !== 'finish' && window.Progress) {
+    Progress.sendAnalytics(1, { time: elapsed, distance: score, medal: '-', result: reason });
   }
 
   if (reason === 'finish') {

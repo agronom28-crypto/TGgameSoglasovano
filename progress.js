@@ -5,9 +5,16 @@
 const STORAGE_KEY   = 'soglasovano_progress';
 const NICKNAME_KEY  = 'soglasovano_nickname';
 // Рабочий сервер на Railway (agronom28-crypto/soglasovano-analytics)
-const ANALYTICS_URL = 'https://soglasovano-analytics-production.up.railway.app';
+const ANALYTICS_URL = (window.APP_CONFIG?.analyticsUrl || '').replace(/\/$/, '');
 
 const tgCloud = window.Telegram?.WebApp?.CloudStorage;
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+function sanitizeNickname(value) {
+  return String(value ?? '').replace(/[<>\u0000-\u001F\u007F]/g, '').trim().slice(0, 32);
+}
 
 function getTgUser() {
   return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
@@ -35,8 +42,10 @@ function getNickname(callback) {
   });
 }
 function setNickname(name, cb) {
-  saveNicknameLocal(name);
-  saveNicknameCloud(name, cb);
+  const safe = sanitizeNickname(name);
+  if (!safe) { if (cb) cb(new Error('Введите имя')); return; }
+  saveNicknameLocal(safe);
+  saveNicknameCloud(safe, cb);
 }
 
 // ─── Примитивы хранения ────────────────────────────────────
@@ -67,7 +76,8 @@ function sendAnalytics(levelN, data) {
     const user     = getTgUser();
     const userId   = user?.id       || 'anonymous';
     const tgName   = user?.username || user?.first_name || '';
-    const nickname = loadNicknameLocal();
+    const nickname = sanitizeNickname(loadNicknameLocal());
+    if (!ANALYTICS_URL) return;
     fetch(ANALYTICS_URL + '/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,8 +90,9 @@ function sendAnalytics(levelN, data) {
         distance: data.distance || data.score || 0,
         medal:    data.medal    || '-',
         result:   data.result   || 'unknown',
+        initData: window.Telegram?.WebApp?.initData || '',
       }),
-    }).catch(() => {});
+    }).then(r => { if (!r.ok) throw new Error(`Analytics HTTP ${r.status}`); }).catch(() => {});
   } catch(e) {}
 }
 
@@ -89,7 +100,8 @@ function sendAnalytics(levelN, data) {
 // Endpoint: GET /api/leaderboard?level=N&top=5
 // Ответ: { level, top: [{ rank, name, score, time }, ...] }
 function fetchLeaderboard(levelN, callback) {
-  fetch(`${ANALYTICS_URL}/api/leaderboard?level=${levelN}&top=5`)
+  if (!ANALYTICS_URL) { callback([]); return; }
+  fetch(`${ANALYTICS_URL}/api/leaderboard?level=${encodeURIComponent(levelN)}&top=5`)
     .then(r => r.json())
     .then(data => callback(data.top || []))
     .catch(() => callback([]));

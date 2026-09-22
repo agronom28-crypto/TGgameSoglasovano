@@ -66,6 +66,7 @@
   </table>
 
   <script>
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     async function load() {
       const url  = document.getElementById('apiUrl').value.replace(/\/$/, '');
       const pass = document.getElementById('pass').value;

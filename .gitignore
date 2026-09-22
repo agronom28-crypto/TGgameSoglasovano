@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Generated drafts and source media
+/generated-image*.png
+/generated-video*.mp4
+/video*.mp4
+/main_level*.mp4
+/final_level1.mp4
+/Level2_VideoFon_QUIZ.mp4
+/MainLevel2.png
+/Main_level 1.png
+/Main_level3.png
+/Level1_SadGameOver.png
+/4b53ff34-4961-42bc-8b0e-d14ebd4f407e.png
+/Снимок экрана*.png
+/На сжатие/
+/Pictures/ .mp4
+
+# Dependencies and secrets
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
